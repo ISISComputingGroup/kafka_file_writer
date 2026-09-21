@@ -1,0 +1,20 @@
+{
+  "children": [
+    {
+      "module": "NXevent_data",
+      "config": {
+        "NXevent_data is": "very special"
+      }
+    },
+    {
+      "module": "IXseblock",
+      "config": {
+        "IXseblock is": "very special"
+      }
+    },
+    {
+      "who knows what": "this was meant to be...?",
+      "also this is": "not really a valid module"
+    }
+  ]
+}

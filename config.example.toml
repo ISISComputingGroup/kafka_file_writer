@@ -1,0 +1,18 @@
+back_in_time_ms = 60000
+error_backoff_s = 10
+job_pool_topic = "NDW2922_runInfo"
+forced_nexus_structure_filepath = "structures/isis.json"
+file_output_directory = "C:\\tmp\\fw_output"
+one_file_only = false
+
+[job_pool_kafka_consumer_settings]
+"bootstrap.servers" = "itachi.isis.cclrc.ac.uk:9092"
+"group.id" = "kafka_file_writer"
+"enable.auto.commit" = "false"
+"isolation.level" = "read_committed"
+
+[data_kafka_consumer_settings]
+"bootstrap.servers" = "itachi.isis.cclrc.ac.uk:9092"
+"enable.auto.commit" = "false"
+"auto.offset.reset" = "latest"
+"isolation.level" = "read_committed"
