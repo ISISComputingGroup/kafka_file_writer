@@ -1,0 +1,14 @@
+{
+  "children": [
+    {
+      "type": "group",
+      "name": "foo"
+    },
+    {
+      "module": "NXevent_data",
+      "config": {
+        "topic": "events"
+      }
+    }
+  ]
+}
