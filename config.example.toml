@@ -1,0 +1,23 @@
+back_in_time_ms = 60000
+
+stream_error_backoff_ms = 3000
+data_consumer_poll_time_ms = 500
+job_pool_consumer_poll_time_ms = 500
+
+job_pool_topic = "NDW2922_runInfo"
+forced_nexus_structure_filepath = "structures/isis.json"
+file_output_directory = "C:\\tmp\\fw_output"
+exit_after_writing_one_file = false
+
+[job_pool_kafka_consumer_settings]
+"bootstrap.servers" = "itachi.isis.cclrc.ac.uk:9092"
+"group.id" = "kafka_file_writer"
+"enable.auto.commit" = "false"
+"isolation.level" = "read_committed"
+
+[data_kafka_consumer_settings]
+"bootstrap.servers" = "itachi.isis.cclrc.ac.uk:9092"
+"enable.auto.commit" = "false"
+"auto.offset.reset" = "latest"
+"isolation.level" = "read_committed"
+"queued.max.messages.kbytes" = "1048576" # 1 GiB
