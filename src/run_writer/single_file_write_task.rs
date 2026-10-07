@@ -1,7 +1,7 @@
 //! The full write-task lifecycle for a single run.
 use crate::config::GlobalConfig;
 use crate::error::FileWriterError;
-use crate::hdf::file_factory::FileFactory;
+use crate::hdf::file_creator::FileCreator;
 use crate::hdf::scope::with_nexus_file;
 use crate::run_writer::in_progress_file::InProgressFile;
 use crate::run_writer::run_start_parameters::RunStartParameters;
@@ -27,7 +27,7 @@ impl SingleFileWriteTask<'_> {
     pub fn write_data_for_run(
         &self,
         consumer: &impl Stream,
-        file_factory: FileFactory,
+        file_factory: FileCreator,
     ) -> Result<(), FileWriterError> {
         let resolved_structure = self.run_start_parameters.structure(self.config)?;
 
@@ -196,7 +196,7 @@ mod tests {
             run_start_parameters: &rsp,
         };
 
-        task.write_data_for_run(&consumer, FileFactory::Memory)
+        task.write_data_for_run(&consumer, FileCreator::Memory)
             .unwrap();
 
         assert_eq!(consumer.messages.borrow().len(), 1);

@@ -2,7 +2,7 @@
 
 use crate::config::GlobalConfig;
 use crate::error::FileWriterError;
-use crate::hdf::file_factory::FileFactory;
+use crate::hdf::file_creator::FileCreator;
 use crate::run_writer::job_pool::wait_for_run_start;
 use crate::run_writer::single_file_write_task::SingleFileWriteTask;
 use crate::stream::error::StreamError;
@@ -28,7 +28,7 @@ where
     pub registry: WriterModuleFactories,
     pub job_pool_consumer_factory: JC,
     pub data_consumer_factory: DC,
-    pub file_factory: FileFactory,
+    pub file_factory: FileCreator,
 }
 
 impl<S, JC, DC> FileWriter<'_, S, JC, DC>
@@ -122,7 +122,7 @@ mod tests {
             registry: default_registry(),
             data_consumer_factory: || Ok(fake_data_stream_with_runstop()),
             job_pool_consumer_factory: || Ok(fake_job_pool_stream_with_runstart()),
-            file_factory: FileFactory::Memory,
+            file_factory: FileCreator::Memory,
         };
 
         assert!(fw.write_one_file().is_ok());
@@ -138,7 +138,7 @@ mod tests {
             registry: default_registry(),
             data_consumer_factory: || Ok(fake_data_stream_with_runstop()),
             job_pool_consumer_factory: || Ok(fake_job_pool_stream_with_runstart()),
-            file_factory: FileFactory::Memory,
+            file_factory: FileCreator::Memory,
         };
 
         assert!(fw.write_files().is_ok());
@@ -151,7 +151,7 @@ mod tests {
             registry: default_registry(),
             data_consumer_factory: || Ok(fake_data_stream_with_runstop()),
             job_pool_consumer_factory: || Ok(fake_job_pool_stream_with_runstart()),
-            file_factory: FileFactory::AlwaysFails,
+            file_factory: FileCreator::AlwaysFails,
         };
 
         assert!(fw.write_one_file().is_err_and(|err| {
@@ -169,7 +169,7 @@ mod tests {
             registry: default_registry(),
             data_consumer_factory: || Err(StreamError::UnitTestError),
             job_pool_consumer_factory: || Ok(fake_job_pool_stream_with_runstart()),
-            file_factory: FileFactory::Memory,
+            file_factory: FileCreator::Memory,
         };
 
         assert!(fw.write_one_file().is_err_and(|err| {
@@ -191,7 +191,7 @@ mod tests {
                 stream.commit_causes_error = true;
                 Ok(stream)
             },
-            file_factory: FileFactory::Memory,
+            file_factory: FileCreator::Memory,
         };
 
         assert!(fw.write_one_file().is_err_and(|err| {

@@ -97,7 +97,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hdf::file_factory::FileFactory;
+    use crate::hdf::file_creator::FileCreator;
     use crate::hdf::scope::with_nexus_file;
     use crate::stream::traits::KafkaMessageMeta;
     use crate::writer_module::WriterModuleError;
@@ -196,7 +196,7 @@ mod tests {
             "bar": [2, 3, 4],
         });
 
-        with_nexus_file(FileFactory::Memory, "test", |f| {
+        with_nexus_file(FileCreator::Memory, "test", |f| {
             let group = f.create_group("test").unwrap();
             create_fn(group, &rsp, config).unwrap();
             Ok(())

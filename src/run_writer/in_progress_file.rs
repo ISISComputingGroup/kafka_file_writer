@@ -173,7 +173,7 @@ impl<'a> InProgressFile<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hdf::file_factory::FileFactory;
+    use crate::hdf::file_creator::FileCreator;
     use crate::hdf::scope::with_nexus_file;
     use crate::run_writer::nexus_structure::NexusWriterModule;
     use crate::subscription::{Subscription, SubscriptionKey};
@@ -266,7 +266,7 @@ mod tests {
 
     #[test]
     fn test_in_progress_file_with_empty_structure() {
-        with_nexus_file(FileFactory::Memory, "test", |f| {
+        with_nexus_file(FileCreator::Memory, "test", |f| {
             let rsp = RunStartParameters::default();
             let ipf = InProgressFile::new(f, &rsp, empty_structure(), &default_registry()).unwrap();
             assert_eq!(ipf.topics().collect::<Vec<&str>>(), Vec::<&str>::new());
@@ -279,7 +279,7 @@ mod tests {
 
     #[test]
     fn test_in_progress_file_with_structure() {
-        with_nexus_file(FileFactory::Memory, "test", |f| {
+        with_nexus_file(FileCreator::Memory, "test", |f| {
             let rsp = RunStartParameters::default();
             let ipf = InProgressFile::new(
                 f,

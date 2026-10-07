@@ -3,7 +3,7 @@ use std::path::Path;
 
 /// Implementations of opening a NeXus file.
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
-pub enum FileFactory {
+pub enum FileCreator {
     /// On-disk - used at runtime
     Disk,
     /// In-memory file - used for tests, and for structure_verify.
@@ -13,7 +13,7 @@ pub enum FileFactory {
     AlwaysFails,
 }
 
-impl FileFactory {
+impl FileCreator {
     pub fn create_file(&self, name: impl AsRef<Path>) -> hdf5::Result<hdf5::File> {
         match self {
             Self::Disk => hdf5::File::create_excl(name),
@@ -46,19 +46,19 @@ mod tests {
 
     #[test]
     fn test_create_in_memory_file() {
-        let f = FileFactory::Memory.create_file("foo").unwrap();
+        let f = FileCreator::Memory.create_file("foo").unwrap();
         f.close().unwrap();
-        let f = FileFactory::Memory.create_file("bar").unwrap();
+        let f = FileCreator::Memory.create_file("bar").unwrap();
         f.close().unwrap();
 
         // Check we can make the same filename again
-        let f = FileFactory::Memory.create_file("bar").unwrap();
+        let f = FileCreator::Memory.create_file("bar").unwrap();
         f.close().unwrap();
     }
 
     #[test]
     fn test_with_nexus_file_success() {
-        let factory = FileFactory::Memory;
+        let factory = FileCreator::Memory;
         let path = PathBuf::from("test");
 
         let result = with_nexus_file(factory, &path, |f| {
@@ -75,7 +75,7 @@ mod tests {
 
     #[test]
     fn test_with_nexus_file_failure() {
-        let factory = FileFactory::Memory;
+        let factory = FileCreator::Memory;
         let path = PathBuf::from("test");
 
         let result: Result<(), _> =
@@ -86,7 +86,7 @@ mod tests {
 
     #[test]
     fn test_with_nexus_file_creation_failure() {
-        let factory = FileFactory::AlwaysFails;
+        let factory = FileCreator::AlwaysFails;
         let path = PathBuf::from("test");
         let mut function_ran = false;
 

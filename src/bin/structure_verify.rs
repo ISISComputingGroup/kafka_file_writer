@@ -5,7 +5,7 @@
 //! On failure, a non-zero exit code will be returned along with a diagnostic
 //! report about which item failed to parse correctly.
 use clap::Parser;
-use kafka_file_writer::hdf::file_factory::FileFactory;
+use kafka_file_writer::hdf::file_creator::FileCreator;
 use kafka_file_writer::hdf::scope::with_nexus_file;
 use kafka_file_writer::run_writer::in_progress_file::InProgressFile;
 use kafka_file_writer::run_writer::nexus_structure::NexusFileStructure;
@@ -38,7 +38,7 @@ fn main() -> Result<()> {
     println!("{:#?}", structure);
 
     // Create an in-memory file with this structure, to verify it instantiates successfully.
-    with_nexus_file(FileFactory::Memory, "structure_verify", |file| {
+    with_nexus_file(FileCreator::Memory, "structure_verify", |file| {
         InProgressFile::new(
             file,
             &RunStartParameters::default(),

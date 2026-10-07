@@ -59,12 +59,12 @@ pub fn add_ascii_string_attribute(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hdf::file_factory::FileFactory;
+    use crate::hdf::file_creator::FileCreator;
     use crate::hdf::scope::with_nexus_file;
 
     #[test]
     fn test_add_root_dataset_attributes() {
-        with_nexus_file(FileFactory::Memory, "unittest", |f| {
+        with_nexus_file(FileCreator::Memory, "unittest", |f| {
             add_root_dataset_attributes(&f).unwrap();
 
             assert!(
@@ -93,7 +93,7 @@ mod tests {
 
     #[test]
     fn test_add_ascii_string_attribute() {
-        with_nexus_file(FileFactory::Memory, "unittest", |f| {
+        with_nexus_file(FileCreator::Memory, "unittest", |f| {
             add_ascii_string_attribute(&f, "foo", "bar").unwrap();
             assert_eq!(
                 f.attr("foo")

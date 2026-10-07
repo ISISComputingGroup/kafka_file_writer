@@ -1,7 +1,7 @@
 //! Utilities for scoped access to HDF5 files.
 use crate::error::FileWriterError;
 use crate::hdf::error::Hdf5Error;
-use crate::hdf::file_factory::FileFactory;
+use crate::hdf::file_creator::FileCreator;
 use log::{info, trace, warn};
 use std::path::Path;
 
@@ -10,7 +10,7 @@ use std::path::Path;
 ///
 /// On exit, flush and close the file.
 pub fn with_nexus_file<F, T>(
-    file_factory: FileFactory,
+    file_factory: FileCreator,
     path: impl AsRef<Path>,
     func: F,
 ) -> Result<T, FileWriterError>
