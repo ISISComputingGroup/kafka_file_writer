@@ -28,15 +28,36 @@ pub fn wait_for_run_start(
                     if let Some(payload) = msg.payload() {
                         let parsed_msg = deserialize_message(payload);
 
-                        if let Ok(DeserializedMessage::RunStartPl72(rs)) = parsed_msg {
-                            debug!(
-                                "Received pl72 (run start) message on topic='{}', partition='{}', offset='{}', job_id='{:?}'",
-                                msg.topic(),
-                                msg.partition(),
-                                msg.offset(),
-                                rs.job_id()
-                            );
-                            return RunStartParameters::from_pl72(&rs, &msg);
+                        match parsed_msg {
+                            Ok(DeserializedMessage::RunStartPl72(rs)) => {
+                                debug!(
+                                    "Received pl72 (run start) message on topic='{}', partition='{}', offset='{}', job_id='{:?}'",
+                                    msg.topic(),
+                                    msg.partition(),
+                                    msg.offset(),
+                                    rs.job_id()
+                                );
+                                return RunStartParameters::from_pl72(&rs, &msg);
+                            }
+                            Ok(DeserializedMessage::RunStop6s4t(_)) => {
+                                // Ignore
+                            }
+                            Ok(_) => {
+                                warn!(
+                                    "Unexpected message type on control topic ignored: topic='{}', partition='{}', offset='{}'",
+                                    msg.topic(),
+                                    msg.partition(),
+                                    msg.offset()
+                                )
+                            }
+                            Err(_) => {
+                                warn!(
+                                    "Got message which could not be deserialized on topic='{}', partition='{}', offset='{}'",
+                                    msg.topic(),
+                                    msg.partition(),
+                                    msg.offset()
+                                );
+                            }
                         }
                     } else {
                         warn!(
@@ -79,7 +100,10 @@ mod tests {
 
         assert_eq!(params.start_time_ms, FakeStream::TEST_START_TIME);
         assert_eq!(params.stop_time_ms, u64::MAX);
-        assert_eq!(params.filename, FakeStream::TEST_FILENAME);
+        assert_eq!(
+            format!("{}", params.filename.display()),
+            FakeStream::TEST_FILENAME
+        );
         assert_eq!(params.nexus_structure, FakeStream::TEST_STRUCTURE);
         assert_eq!(params.metadata, None);
         assert_eq!(params.n_periods, 1);

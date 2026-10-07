@@ -2,6 +2,10 @@
 //!
 //! Listen to Kafka, write the data into NeXus files.
 //!
+//! The data may include things like event-mode data, histogrammed views of the event-mode data,
+//! sample-environment block data, run metadata, static datasets describing instrument or sample
+//! state.
+//!
 //! ## Architecture overview
 //!
 //! The architecture of this filewriter is loosely based on the
@@ -37,6 +41,15 @@
 //! Per-run configuration, for example NeXus structure, comes via the run start message.
 //!
 //! ## Nexus structures
+//!
+//! The file-structure written by this filewriter is defined dynamically, by the `nexus_structure`
+//! field of a [run start message](https://github.com/ISISComputingGroup/streaming-data-types/blob/master/schemas/pl72_run_start.fbs).
+//!
+//! For example, the `nexus_structure` defines:
+//! - Whether event-mode data is written, and if so, where in the file it is written to
+//! - Whether histogram-mode data is written
+//! - Which blocks are written
+//! - Which static datasets are written
 //!
 //! The NeXus structures expected by this program are inspired by, but differ from, the ESS'
 //! NeXus structures.

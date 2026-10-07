@@ -143,12 +143,8 @@ impl<'a> InProgressFile<'a> {
         meta: &KafkaMessageMeta,
         msg: &DeserializedMessage,
     ) -> Result<(), FileWriterError> {
-        let Self {
-            router, writers, ..
-        } = self;
-
-        for writer_index in router.writers_for(meta) {
-            if let Some(writer) = writers.get_mut(writer_index) {
+        for writer_index in self.router.writers_for(meta) {
+            if let Some(writer) = self.writers.get_mut(writer_index) {
                 writer.on_message(meta, msg)?;
             } else {
                 error!(

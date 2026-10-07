@@ -5,7 +5,7 @@ use serde::Deserialize;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
-fn default_back_in_time_ms() -> u64 {
+fn default_stream_seek_back_in_time_ms() -> u64 {
     60_000
 }
 
@@ -30,8 +30,8 @@ fn default_exit_after_writing_one_file() -> bool {
 pub struct GlobalConfig {
     /// How far to seek-back and replay all streams before run start. This is applied
     /// globally to all topics.
-    #[serde(default = "default_back_in_time_ms")]
-    pub back_in_time_ms: u64,
+    #[serde(default = "default_stream_seek_back_in_time_ms")]
+    pub stream_seek_back_in_time_ms: u64,
 
     /// Kafka topic to listen for jobs on
     pub job_pool_topic: String,
@@ -117,7 +117,7 @@ impl GlobalConfig {
             job_pool_consumer_poll_time_ms: 1,
             data_consumer_poll_time_ms: 1,
             kafka_assignment_timeout_ms: 1,
-            back_in_time_ms: 0,
+            stream_seek_back_in_time_ms: 0,
             forced_nexus_structure_filepath: None,
         }
     }

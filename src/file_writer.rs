@@ -4,7 +4,7 @@ use crate::config::GlobalConfig;
 use crate::error::FileWriterError;
 use crate::hdf::file_factory::FileFactory;
 use crate::run_writer::job_pool::wait_for_run_start;
-use crate::run_writer::task::Task;
+use crate::run_writer::single_file_write_task::SingleFileWriteTask;
 use crate::stream::error::StreamError;
 use crate::stream::traits::Stream;
 use crate::writer_module_factories::WriterModuleFactories;
@@ -74,13 +74,13 @@ where
         info!(
             "Run start job_id='{}' filename='{}' start_time='{}'",
             run_start_parameters.job_id,
-            run_start_parameters.filename,
+            run_start_parameters.filename.display(),
             run_start_parameters.start_time_ms
         );
 
         let data_consumer = (self.data_consumer_factory)()?;
 
-        let task = Task {
+        let task = SingleFileWriteTask {
             config: self.config,
             writer_module_factories: &self.registry,
             run_start_parameters: &run_start_parameters,

@@ -10,6 +10,7 @@ use crate::writer_module::{
 use hdf5::SimpleExtents;
 use isis_streaming_data_types::DeserializedMessage;
 use isis_streaming_data_types::flatbuffers_generated::run_stop_6s4t::RunStop;
+use log::debug;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -116,7 +117,12 @@ impl WriterModule for NXeventdata {
                     )
                     .err_dataset(&event_time_offset)?;
             }
-            _ => {}
+            _ => {
+                debug!(
+                    "nxevent_data writer got message unrecognised schema (topic={}, partition={}, offset={})",
+                    meta.topic, meta.partition, meta.offset
+                )
+            }
         }
         Ok(())
     }

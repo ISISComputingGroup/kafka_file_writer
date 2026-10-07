@@ -17,13 +17,13 @@ use std::iter::once;
 use std::thread;
 use std::time::Duration;
 
-pub struct Task<'a> {
+pub struct SingleFileWriteTask<'a> {
     pub config: &'a GlobalConfig,
     pub writer_module_factories: &'a WriterModuleFactories,
     pub run_start_parameters: &'a RunStartParameters,
 }
 
-impl Task<'_> {
+impl SingleFileWriteTask<'_> {
     pub fn write_data_for_run(
         &self,
         consumer: &impl Stream,
@@ -45,7 +45,7 @@ impl Task<'_> {
             let seek_timestamp: i64 = self
                 .run_start_parameters
                 .start_time_ms
-                .saturating_sub(self.config.back_in_time_ms)
+                .saturating_sub(self.config.stream_seek_back_in_time_ms)
                 .try_into()
                 .map_err(|e| FileWriterError::IntegerError {
                     cause: e,
@@ -175,7 +175,7 @@ mod tests {
             job_id: FakeStream::TEST_JOB_ID.to_string(),
             nexus_structure: FakeStream::TEST_STRUCTURE.to_string(),
             control_topic: None,
-            filename: FakeStream::TEST_FILENAME.to_string(),
+            filename: FakeStream::TEST_FILENAME.into(),
             n_periods: 1,
             metadata: None,
         };
@@ -190,7 +190,7 @@ mod tests {
         consumer.append_runinfo_run_stop_message();
         consumer.append_runinfo_run_stop_message();
 
-        let task = Task {
+        let task = SingleFileWriteTask {
             config: &config,
             writer_module_factories: &default_registry(),
             run_start_parameters: &rsp,

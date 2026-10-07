@@ -1,10 +1,12 @@
 //! Parameters from the start of the run currently being written.
+
 use crate::config::GlobalConfig;
 use crate::error::FileWriterError;
 use crate::run_writer::nexus_structure::NexusFileStructure;
 use isis_streaming_data_types::flatbuffers_generated::run_start_pl72::RunStart;
-use log::{debug, info, trace};
+use log::{debug, info, trace, warn};
 use rdkafka::Message;
+use std::path::PathBuf;
 
 /// An owned version of the parts of a pl72 runStart that the filewriter needs to know about.
 #[derive(Debug, PartialEq, Eq, Default)]
@@ -13,7 +15,7 @@ pub struct RunStartParameters {
     pub stop_time_ms: u64,
     pub nexus_structure: String,
     pub job_id: String,
-    pub filename: String,
+    pub filename: PathBuf,
     pub n_periods: u32,
     pub metadata: Option<String>,
     pub control_topic: Option<String>,
@@ -26,19 +28,19 @@ impl RunStartParameters {
         rs: &RunStart,
         msg: &impl Message,
     ) -> Result<RunStartParameters, FileWriterError> {
-        let mut stop_time = rs.stop_time();
-        if stop_time == 0 {
+        let stop_time = match rs.stop_time() {
             // If a stop time is not provided, write "forever" until we get a run-stop message.
-            stop_time = u64::MAX;
-        }
+            0 => u64::MAX,
+            t => t,
+        };
 
         Ok(RunStartParameters {
             start_time_ms: rs.start_time(),
             stop_time_ms: stop_time,
-            filename: rs
-                .filename()
-                .ok_or_else(|| FileWriterError::from_missing_runstart_data("filename", msg))?
-                .to_owned(),
+            filename: PathBuf::from(
+                rs.filename()
+                    .ok_or_else(|| FileWriterError::from_missing_runstart_data("filename", msg))?,
+            ),
             nexus_structure: rs
                 .nexus_structure()
                 .ok_or_else(|| FileWriterError::from_missing_runstart_data("nexus_structure", msg))?
@@ -56,31 +58,37 @@ impl RunStartParameters {
     /// Get the NeXus file structure from the run start message, or use
     /// the structure overridden in `GlobalConfig` if present.
     pub fn structure(&self, config: &GlobalConfig) -> Result<NexusFileStructure, FileWriterError> {
-        if let Some(ref file_path) = config.forced_nexus_structure_filepath {
-            info!(
-                "Using forced nexus_structure from local file at '{}'",
-                file_path.display()
-            );
-            NexusFileStructure::from_local_file(file_path)
-        } else {
-            info!("Using NeXus structure from pl72 message");
-            trace!("NeXus structure: {:#?}", self.nexus_structure);
-            NexusFileStructure::from_run_start(self)
+        match config.forced_nexus_structure_filepath {
+            Some(ref file_path) => {
+                warn!(
+                    "Using forced nexus_structure from local file at '{}'",
+                    file_path.display()
+                );
+                NexusFileStructure::from_local_file(file_path)
+            }
+            None => {
+                info!("Using NeXus structure from pl72 message");
+                trace!("NeXus structure: {:#?}", self.nexus_structure);
+                NexusFileStructure::from_run_start(self)
+            }
         }
     }
 
     /// Get the control topic for this message; uses the job-pool topic
     /// if not provided in the runstart message.
     pub fn control_topic<'a>(&'a self, config: &'a GlobalConfig) -> &'a str {
-        if let Some(control_topic) = &self.control_topic {
-            debug!("Using control topic from run start '{}'", control_topic);
-            control_topic
-        } else {
-            debug!(
-                "No control topic in run start; using job pool topic for control '{}'",
-                config.job_pool_topic
-            );
-            &config.job_pool_topic
+        match self.control_topic {
+            Some(ref topic) => {
+                debug!("Using control topic from run start '{}'", topic);
+                topic
+            }
+            None => {
+                debug!(
+                    "No control topic in run start; using job pool topic for control '{}'",
+                    config.job_pool_topic
+                );
+                &config.job_pool_topic
+            }
         }
     }
 }
