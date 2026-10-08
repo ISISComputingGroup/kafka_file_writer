@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["attr","error","file_creator","scope","traits"]};

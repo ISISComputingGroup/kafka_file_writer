@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["KafkaMessageMeta"],"trait":["Stream"]};
