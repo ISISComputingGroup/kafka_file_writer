@@ -80,11 +80,7 @@ where
 
         let data_consumer = (self.data_consumer_factory)()?;
 
-        let task = SingleFileWriteTask {
-            config: self.config,
-            writer_module_factories: &self.registry,
-            run_start_parameters: &run_start_parameters,
-        };
+        let mut task = SingleFileWriteTask::new(self.config, &self.registry, &run_start_parameters);
 
         task.write_data_for_run(&data_consumer, self.file_factory)?;
 

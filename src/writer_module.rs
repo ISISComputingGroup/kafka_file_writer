@@ -108,15 +108,6 @@ pub trait WriterModule: Debug {
     /// This may be called multiple times during a single run, for example
     /// to generate an autosave/intermediate file and then after run-end.
     fn flush(&mut self) -> Result<(), WriterModuleError>;
-
-    /// Has this writer module finished writing, after a run-stop was received?
-    ///
-    /// Due to out-of-order Kafka message delivery, a run stop may be received
-    /// before messages which occured during the run. This hook allows a writer
-    /// module to declare whether it has received all necessary data up to
-    /// run end. It should return `true` if all necessary data has been received,
-    /// or `false` otherwise.
-    fn finished(&self) -> bool;
 }
 
 /// Creation parameters for writer modules of this type. This trait
