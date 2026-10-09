@@ -38,10 +38,6 @@ impl WriterModule for IXseblock {
     fn flush(&mut self) -> Result<(), WriterModuleError> {
         Ok(())
     }
-
-    fn finished(&self) -> bool {
-        true
-    }
 }
 
 impl WriterModuleSpec for IXseblock {
