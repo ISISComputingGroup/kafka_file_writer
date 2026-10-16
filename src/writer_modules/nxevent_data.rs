@@ -139,10 +139,6 @@ impl WriterModule for NXeventdata {
     fn flush(&mut self) -> Result<(), WriterModuleError> {
         Ok(())
     }
-
-    fn finished(&self) -> bool {
-        self.latest_message_time_ms >= self.run_stop_time_ms
-    }
 }
 
 impl WriterModuleSpec for NXeventdata {
