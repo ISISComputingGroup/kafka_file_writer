@@ -3,26 +3,30 @@
 use crate::config::GlobalConfig;
 use crate::error::FileWriterError;
 use crate::hdf::file_creator::FileCreator;
+use crate::metrics::{FILE_WRITE_FAILURES, FILES_WRITTEN, WRITING_FILE};
 use crate::run_writer::job_pool::wait_for_run_start;
 use crate::run_writer::single_file_write_task::SingleFileWriteTask;
 use crate::stream::error::StreamError;
 use crate::stream::traits::Stream;
 use crate::writer_module_factories::WriterModuleFactories;
 use log::{error, info};
+use metrics::{counter, gauge};
 use miette::Report;
 use std::time::Duration;
 
 /// Top-level file writer object.
 ///
 /// Type parameters:
-/// - `S`: `Stream` type
+/// - `JS`: job-pool `Stream` type
+/// - `DS`: data consumer `Stream` type
 /// - `JC`: job-pool consumer factory type
 /// - `DC`: data consumer factory type
-pub struct FileWriter<'a, S, JC, DC>
+pub struct FileWriter<'a, JS, DS, JC, DC>
 where
-    S: Stream,
-    JC: Fn() -> Result<S, StreamError>,
-    DC: Fn() -> Result<S, StreamError>,
+    JS: Stream,
+    DS: Stream,
+    JC: Fn() -> Result<JS, StreamError>,
+    DC: Fn() -> Result<DS, StreamError>,
 {
     pub config: &'a GlobalConfig,
     pub registry: WriterModuleFactories,
@@ -31,11 +35,12 @@ where
     pub file_factory: FileCreator,
 }
 
-impl<S, JC, DC> FileWriter<'_, S, JC, DC>
+impl<JS, DS, JC, DC> FileWriter<'_, JS, DS, JC, DC>
 where
-    S: Stream,
-    JC: Fn() -> Result<S, StreamError>,
-    DC: Fn() -> Result<S, StreamError>,
+    JS: Stream,
+    DS: Stream,
+    JC: Fn() -> Result<JS, StreamError>,
+    DC: Fn() -> Result<DS, StreamError>,
 {
     /// Write multiple files.
     ///
@@ -56,6 +61,8 @@ where
                 error!("Failed to write file: {:?}", report);
 
                 std::thread::sleep(Duration::from_millis(self.config.stream_error_backoff_ms));
+            } else {
+                counter!(FILES_WRITTEN).increment(1);
             }
         }
     }
@@ -80,19 +87,26 @@ where
 
         let data_consumer = (self.data_consumer_factory)()?;
 
-        let task = SingleFileWriteTask {
-            config: self.config,
-            writer_module_factories: &self.registry,
-            run_start_parameters: &run_start_parameters,
+        let mut task = SingleFileWriteTask::new(self.config, &self.registry, &run_start_parameters);
+
+        gauge!(WRITING_FILE).set(1);
+        let result = task.write_data_for_run(&data_consumer, self.file_factory);
+        gauge!(WRITING_FILE).set(0);
+
+        match result {
+            Ok(_) => {
+                info!(
+                    "Successfully wrote job_id='{}'",
+                    run_start_parameters.job_id
+                );
+            }
+            Err(_) => {
+                error!("Failed to write job_id='{}'", run_start_parameters.job_id);
+                counter!(FILE_WRITE_FAILURES).increment(1);
+            }
         };
 
-        task.write_data_for_run(&data_consumer, self.file_factory)?;
-
-        info!(
-            "Successfully wrote job_id='{}'",
-            run_start_parameters.job_id
-        );
-        Ok(())
+        result
     }
 }
 
@@ -167,7 +181,10 @@ mod tests {
         let fw = FileWriter {
             config: &GlobalConfig::test_config(),
             registry: default_registry(),
-            data_consumer_factory: || Err(StreamError::UnitTestError),
+            data_consumer_factory: || {
+                let data_consumer: Result<FakeStream, _> = Err(StreamError::UnitTestError);
+                data_consumer
+            },
             job_pool_consumer_factory: || Ok(fake_job_pool_stream_with_runstart()),
             file_factory: FileCreator::Memory,
         };

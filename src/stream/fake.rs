@@ -1,6 +1,6 @@
 //! Definition of a fake Kafka consumer, for use in tests and benchmarks.
 use crate::stream::error::StreamError;
-use crate::stream::traits::Stream;
+use crate::stream::traits::{Stream, TopicPartitionOffsets};
 use flatbuffers::FlatBufferBuilder;
 use isis_streaming_data_types::flatbuffers_generated::run_start_pl72::{
     RunStart, RunStartArgs, finish_run_start_buffer,
@@ -23,9 +23,11 @@ pub struct FakeStream {
     pub subscribe_causes_error: bool,
     pub unassign_causes_error: bool,
     pub commit_causes_error: bool,
+    pub offsets_for_timestamp_causes_error: bool,
     pub messages: RefCell<VecDeque<Result<OwnedMessage, StreamError>>>,
     pub topics: RefCell<Vec<String>>,
     pub is_assigned: RefCell<bool>,
+    pub offsets_for_timestamp: RefCell<TopicPartitionOffsets>,
 }
 
 #[derive(Debug, Error, Diagnostic, Default)]
@@ -34,6 +36,20 @@ struct FakeStreamError {}
 
 impl Stream for FakeStream {
     type Msg<'a> = OwnedMessage;
+
+    fn offsets_for_timestamp(
+        &self,
+        _timestamp: i64,
+        _timeout: Duration,
+    ) -> Result<TopicPartitionOffsets, StreamError> {
+        if self.offsets_for_timestamp_causes_error {
+            Err(StreamError::OffsetsForTimestampError {
+                cause: Box::new(FakeStreamError::default()),
+            })
+        } else {
+            Ok(self.offsets_for_timestamp.borrow().clone())
+        }
+    }
 
     fn assign_from_timestamp(
         &self,
