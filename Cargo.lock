@@ -1040,6 +1040,7 @@ dependencies = [
  "isis_streaming_data_types",
  "itertools 0.15.0",
  "log",
+ "metrics",
  "metrics-exporter-prometheus",
  "miette",
  "rdkafka",

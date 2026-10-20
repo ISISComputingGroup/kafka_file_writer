@@ -4,6 +4,10 @@ use crate::config::GlobalConfig;
 use crate::error::FileWriterError;
 use crate::hdf::file_creator::FileCreator;
 use crate::hdf::scope::with_nexus_file;
+use crate::metrics::{
+    INCOMING_DATA_MESSAGE_SIZE, INCOMING_DATA_MESSAGES, INCOMING_DATA_MESSAGES_FAILED_DESERIALIZE,
+    INCOMING_DATA_MESSAGES_NO_PAYLOAD, KAFKA_POLL_ERRORS, SCHEMA_PROCESSING_TIMES,
+};
 use crate::run_writer::in_progress_file::InProgressFile;
 use crate::run_writer::run_end_tracker::RunEndTracker;
 use crate::run_writer::run_start_parameters::RunStartParameters;
@@ -11,14 +15,15 @@ use crate::stream::scope::with_assignment;
 use crate::stream::traits::{KafkaMessageMeta, Stream};
 use crate::writer_module_factories::WriterModuleFactories;
 use isis_streaming_data_types::flatbuffers_generated::run_stop_6s4t::RunStop;
-use isis_streaming_data_types::{DeserializedMessage, deserialize_message};
+use isis_streaming_data_types::{DeserializedMessage, deserialize_message, get_schema_id};
 use itertools::Itertools;
 use log::{debug, info, warn};
+use metrics::{counter, histogram};
 use miette::Report;
 use rdkafka::Message;
 use std::iter::once;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 pub struct SingleFileWriteTask<'a> {
     config: &'a GlobalConfig,
@@ -145,6 +150,7 @@ impl<'a> SingleFileWriteTask<'a> {
                 Some(Err(e)) => {
                     let report = Report::from(e);
                     warn!("Error during consumer poll (will retry): {:?}", report);
+                    counter!(KAFKA_POLL_ERRORS).increment(1);
                     thread::sleep(Duration::from_millis(self.config.stream_error_backoff_ms));
                 }
                 None => {}
@@ -188,8 +194,12 @@ impl<'a> SingleFileWriteTask<'a> {
         self.run_end_tracker.message_consumed(&meta);
 
         if let Some(payload) = msg.payload() {
-            let parsed_msg = deserialize_message(payload);
+            counter!(INCOMING_DATA_MESSAGES).increment(1);
+            counter!(INCOMING_DATA_MESSAGE_SIZE).increment(payload.len() as u64);
 
+            let start_time = Instant::now();
+
+            let parsed_msg = deserialize_message(payload);
             match parsed_msg {
                 Ok(DeserializedMessage::RunStop6s4t(run_stop)) => {
                     self.handle_stop(&meta, &run_stop, in_progress_file, consumer)?;
@@ -204,7 +214,14 @@ impl<'a> SingleFileWriteTask<'a> {
                         msg.payload().map(|p| p.len()),
                         err
                     );
+                    counter!(INCOMING_DATA_MESSAGES_FAILED_DESERIALIZE).increment(1);
                 }
+            }
+            if let Some(schema_bytes) = get_schema_id(payload)
+                && let Ok(schema) = str::from_utf8(schema_bytes)
+            {
+                histogram!(SCHEMA_PROCESSING_TIMES, "schema" => schema.to_owned())
+                    .record(start_time.elapsed().as_secs_f64());
             }
         } else {
             warn!(
@@ -213,6 +230,7 @@ impl<'a> SingleFileWriteTask<'a> {
                 msg.partition(),
                 msg.offset()
             );
+            counter!(INCOMING_DATA_MESSAGES_NO_PAYLOAD).increment(1);
         }
 
         Ok(())

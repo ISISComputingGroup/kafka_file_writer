@@ -1,11 +1,16 @@
 //! Interface to the job-pool, for acquiring a run to write.
 use crate::config::GlobalConfig;
 use crate::error::FileWriterError;
+use crate::metrics::{
+    INCOMING_CONTROL_MESSAGES_FAILED_DESERIALIZE, INCOMING_CONTROL_MESSAGES_NO_PAYLOAD,
+    INCOMING_CONTROL_MESSAGES_UNKNOWN_SCHEMA, KAFKA_POLL_ERRORS,
+};
 use crate::run_writer::run_start_parameters::RunStartParameters;
 use crate::stream::scope::with_subscription_to_job_pool;
 use crate::stream::traits::Stream;
 use isis_streaming_data_types::{DeserializedMessage, deserialize_message};
 use log::{debug, warn};
+use metrics::counter;
 use miette::Report;
 use rdkafka::Message;
 use rdkafka::consumer::CommitMode;
@@ -48,7 +53,8 @@ pub fn wait_for_run_start(
                                     msg.topic(),
                                     msg.partition(),
                                     msg.offset()
-                                )
+                                );
+                                counter!(INCOMING_CONTROL_MESSAGES_UNKNOWN_SCHEMA).increment(1);
                             }
                             Err(_) => {
                                 warn!(
@@ -57,6 +63,7 @@ pub fn wait_for_run_start(
                                     msg.partition(),
                                     msg.offset()
                                 );
+                                counter!(INCOMING_CONTROL_MESSAGES_FAILED_DESERIALIZE).increment(1);
                             }
                         }
                     } else {
@@ -65,12 +72,14 @@ pub fn wait_for_run_start(
                             msg.topic(),
                             msg.partition(),
                             msg.offset()
-                        )
+                        );
+                        counter!(INCOMING_CONTROL_MESSAGES_NO_PAYLOAD).increment(1);
                     }
                 }
                 Some(Err(e)) => {
                     let report = Report::from(e);
                     warn!("Error during consumer poll (will retry): {:?}", report);
+                    counter!(KAFKA_POLL_ERRORS).increment(1);
                     thread::sleep(Duration::from_millis(config.stream_error_backoff_ms));
                 }
                 None => {}

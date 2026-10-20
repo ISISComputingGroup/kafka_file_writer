@@ -1,7 +1,9 @@
 //! Global file-writer configuration file support.
+
 use ahash::HashMap;
 use miette::Diagnostic;
 use serde::Deserialize;
+use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
@@ -76,6 +78,9 @@ pub struct GlobalConfig {
     /// the structure specified in a local file
     pub forced_nexus_structure_filepath: Option<PathBuf>,
 
+    /// IP address and port onto which to bind prometheus metrics.
+    pub metrics_bind_addr: SocketAddr,
+
     #[serde(default = "default_exit_after_writing_one_file")]
     pub exit_after_writing_one_file: bool,
 }
@@ -133,6 +138,7 @@ impl GlobalConfig {
             stream_seek_back_in_time_ms: 0,
             stream_settle_time_ms: 0,
             forced_nexus_structure_filepath: None,
+            metrics_bind_addr: SocketAddr::from(([127, 0, 0, 1], 8080)),
         }
     }
 }

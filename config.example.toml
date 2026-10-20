@@ -10,11 +10,14 @@ forced_nexus_structure_filepath = "structures/isis.json"
 file_output_directory = "C:\\tmp\\fw_output"
 exit_after_writing_one_file = false
 
+metrics_bind_addr = "127.0.0.1:8486"
+
 [job_pool_kafka_consumer_settings]
 "bootstrap.servers" = "itachi.isis.cclrc.ac.uk:9092"
 "group.id" = "kafka_file_writer"
 "enable.auto.commit" = "false"
 "isolation.level" = "read_committed"
+"statistics.interval.ms" = "30000"
 
 [data_kafka_consumer_settings]
 "bootstrap.servers" = "itachi.isis.cclrc.ac.uk:9092"
@@ -22,3 +25,4 @@ exit_after_writing_one_file = false
 "auto.offset.reset" = "latest"
 "isolation.level" = "read_committed"
 "queued.max.messages.kbytes" = "1048576" # 1 GiB
+"statistics.interval.ms" = "30000"
