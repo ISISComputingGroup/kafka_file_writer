@@ -14,7 +14,7 @@
             {
               "module": "NXevent_data",
               "config": {
-                "topic": "NDW2922_rawEvents"
+                "topic": "ALF_events"
               }
             }
           ]

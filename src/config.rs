@@ -8,18 +8,21 @@ use thiserror::Error;
 fn default_stream_seek_back_in_time_ms() -> u64 {
     60_000
 }
-
+fn default_settle_time_ms() -> u64 {
+    10_000
+}
 fn default_poll_time_ms() -> u64 {
     1000
 }
-
 fn default_stream_error_backoff_ms() -> u64 {
     3000
 }
 fn default_kafka_assignment_timeout_ms() -> u64 {
     10000
 }
-
+fn default_kafka_metadata_timeout_ms() -> u64 {
+    10000
+}
 fn default_exit_after_writing_one_file() -> bool {
     false
 }
@@ -32,6 +35,12 @@ pub struct GlobalConfig {
     /// globally to all topics.
     #[serde(default = "default_stream_seek_back_in_time_ms")]
     pub stream_seek_back_in_time_ms: u64,
+
+    /// Minimum time to wait after the timestamp in a run stop message before a file
+    /// can be written, to allow for latency of messages reaching Kafka. Note that
+    /// this delays creation of the final data file.
+    #[serde(default = "default_settle_time_ms")]
+    pub stream_settle_time_ms: u64,
 
     /// Kafka topic to listen for jobs on
     pub job_pool_topic: String,
@@ -50,6 +59,9 @@ pub struct GlobalConfig {
 
     #[serde(default = "default_kafka_assignment_timeout_ms")]
     pub kafka_assignment_timeout_ms: u64,
+
+    #[serde(default = "default_kafka_metadata_timeout_ms")]
+    pub kafka_metadata_timeout_ms: u64,
 
     /// Kafka consumer settings for job pool
     pub job_pool_kafka_consumer_settings: HashMap<String, String>,
@@ -117,7 +129,9 @@ impl GlobalConfig {
             job_pool_consumer_poll_time_ms: 1,
             data_consumer_poll_time_ms: 1,
             kafka_assignment_timeout_ms: 1,
+            kafka_metadata_timeout_ms: 1,
             stream_seek_back_in_time_ms: 0,
+            stream_settle_time_ms: 0,
             forced_nexus_structure_filepath: None,
         }
     }
