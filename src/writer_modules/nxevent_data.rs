@@ -1,5 +1,6 @@
+use crate::hdf::dataset::{AppendableDataset1D};
+use ahash::{HashMap, HashMapExt};
 use crate::hdf::attr::add_ascii_string_attribute;
-use crate::hdf::traits::Hdf5ErrorContext;
 use crate::run_writer::run_start_parameters::RunStartParameters;
 use crate::stream::traits::KafkaMessageMeta;
 use crate::subscription::{Subscription, SubscriptionKey};
@@ -7,11 +8,34 @@ use crate::writer_module::{
     WriterModule, WriterModuleCreateResult, WriterModuleCreationError, WriterModuleError,
     WriterModuleSpec,
 };
-use hdf5::SimpleExtents;
 use isis_streaming_data_types::DeserializedMessage;
 use isis_streaming_data_types::flatbuffers_generated::run_stop_6s4t::RunStop;
 use log::debug;
 use serde::Deserialize;
+
+#[derive(Debug)]
+struct PartialFrame {
+    reference_time: i64,
+    event_id: Vec<u32>,
+    event_time_offset: Vec<f32>,
+}
+
+impl PartialFrame {
+    fn new(reference_time: i64) -> Self {
+        PartialFrame {
+            reference_time,
+            event_id: vec![],
+            event_time_offset: vec![],
+        }
+    }
+
+    fn add_events(&mut self, event_id: impl IntoIterator<Item = i32>, event_time_offset: impl IntoIterator<Item = i32>) {
+        for (id, offset) in event_id.into_iter().zip(event_time_offset.into_iter()) {
+            self.event_id.push(id as u32);
+            self.event_time_offset.push(offset as f32 / 1000.);
+        }
+    }
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -22,10 +46,13 @@ pub struct NXeventdataConfig {
 #[derive(Debug)]
 pub struct NXeventdata {
     _config: NXeventdataConfig,
-    group: hdf5::Group,
     run_start_time_ms: u64,
     run_stop_time_ms: u64,
     latest_message_time_ms: u64,
+    partial_frames: HashMap<(String, i32), PartialFrame>,
+    event_time_zero: AppendableDataset1D<f64>,
+    event_id: AppendableDataset1D<u32>,
+    event_time_offset: AppendableDataset1D<f32>,
 }
 
 impl WriterModule for NXeventdata {
@@ -34,16 +61,10 @@ impl WriterModule for NXeventdata {
         meta: &KafkaMessageMeta,
         message: &DeserializedMessage,
     ) -> Result<(), WriterModuleError> {
-        // TODO: the logic for constructing these datasets from pu00 + ev44 is more complicated
-        // TODO: than this. Additionally, various parts of this need refactoring into separate
-        // TODO: reusable modules.
-        // TODO: Currently this is just a proof-of-principle that writer modules can receive and
-        // TODO: write data.
         if let Some(timestamp) = meta.timestamp {
-            let timestamp = timestamp.try_into().map_err(|e| WriterModuleError::Fatal {
-                cause: Box::new(e),
-                context: "Kafka message timestamp was negative",
-            })?;
+            let timestamp = timestamp.try_into().map_err(|_| WriterModuleError::InvalidData (
+                "timestamp in ev44 was negative".to_owned()
+            ))?;
 
             self.latest_message_time_ms = timestamp;
             if timestamp < self.run_start_time_ms || timestamp > self.run_stop_time_ms {
@@ -54,22 +75,21 @@ impl WriterModule for NXeventdata {
 
         match message {
             DeserializedMessage::PulseMetadataPu00(msg) => {
-                let event_time_zero = self
-                    .group
-                    .dataset("event_time_zero")
-                    .err_parent_dataset(&self.group, "event_time_zero")?;
-                let original_length = event_time_zero.size();
-                event_time_zero
-                    .resize(original_length + 1)
-                    .err_dataset(&event_time_zero)?;
-                event_time_zero
-                    .write_slice(&[msg.reference_time() as f64], original_length..)
-                    .err_dataset(&event_time_zero)?;
+                self.event_time_zero.append_value(msg.reference_time() as f64)?;
+
+                let new_frame = PartialFrame::new(msg.reference_time());
+
+                if let Some(old_frame) = self.partial_frames.insert((meta.topic.to_owned(), meta.partition), new_frame) {
+                    self.event_time_zero.append_value(old_frame.reference_time as f64)?;
+                    self.event_id.append_slice(&old_frame.event_id)?;
+                    self.event_time_offset.append_slice(&old_frame.event_time_offset)?;
+                }
             }
             DeserializedMessage::EventDataEv44(msg) => {
                 let pixel_ids = msg
                     .pixel_id()
                     .ok_or_else(|| WriterModuleError::InvalidData("Missing pixel_id".to_owned()))?;
+
                 let time_of_flight = msg.time_of_flight().ok_or_else(|| {
                     WriterModuleError::InvalidData("Missing time_of_flight".to_owned())
                 })?;
@@ -84,38 +104,11 @@ impl WriterModule for NXeventdata {
                     )));
                 }
 
-                let event_time_offset = self
-                    .group
-                    .dataset("event_time_offset")
-                    .err_parent_dataset(&self.group, "event_time_offset")?;
-                let event_id = self
-                    .group
-                    .dataset("event_id")
-                    .err_parent_dataset(&self.group, "event_id")?;
-                let original_length = event_time_offset.size();
-                event_id
-                    .resize(original_length + pixel_ids_len)
-                    .err_dataset(&event_id)?;
-                event_time_offset
-                    .resize(original_length + time_of_flight_len)
-                    .err_dataset(&event_time_offset)?;
-
-                event_id
-                    .write_slice(
-                        &pixel_ids.into_iter().collect::<Vec<_>>(),
-                        original_length..,
-                    )
-                    .err_dataset(&event_id)?;
-
-                event_time_offset
-                    .write_slice(
-                        &time_of_flight
-                            .into_iter()
-                            .map(|t| (t as f32) / 1000.)
-                            .collect::<Vec<_>>(),
-                        original_length..,
-                    )
-                    .err_dataset(&event_time_offset)?;
+                if let Some(partial_frame) = self.partial_frames.get_mut(&(meta.topic.to_owned(), meta.partition)) {
+                    partial_frame.add_events(pixel_ids, time_of_flight);
+                } else {
+                    return Err(WriterModuleError::InvalidData("Missing partial frame for event data".to_owned()))
+                }
             }
             _ => {
                 debug!(
@@ -137,6 +130,12 @@ impl WriterModule for NXeventdata {
     }
 
     fn flush(&mut self) -> Result<(), WriterModuleError> {
+        for frame in self.partial_frames.values_mut() {
+            self.event_time_zero.append_value(frame.reference_time as f64)?;
+            self.event_id.append_slice(&frame.event_id)?;
+            self.event_time_offset.append_slice(&frame.event_time_offset)?;
+        }
+        self.partial_frames.clear();
         Ok(())
     }
 }
@@ -156,52 +155,26 @@ impl WriterModuleSpec for NXeventdata {
             SubscriptionKey::All,
         )];
 
-        let mut module = NXeventdata {
+        let event_time_zero = AppendableDataset1D::create_dataset(&group, "event_time_zero", 32000)?;
+        let event_id = AppendableDataset1D::create_dataset(&group, "event_id", 32000)?;
+        let event_time_offset = AppendableDataset1D::create_dataset(&group, "event_time_offset", 32000)?;
+
+        add_ascii_string_attribute(&group, "NX_class", "NXevent_data")?;
+
+        let module = NXeventdata {
             _config: config,
-            group,
             latest_message_time_ms: 0,
             run_start_time_ms: run_start_parameters.start_time_ms,
             run_stop_time_ms: run_start_parameters.stop_time_ms,
+            partial_frames: HashMap::new(),
+            event_id,
+            event_time_zero,
+            event_time_offset,
         };
-
-        module.init(run_start_parameters)?;
 
         Ok(WriterModuleCreateResult {
             module,
             subscriptions,
         })
-    }
-}
-
-impl NXeventdata {
-    fn init(
-        &mut self,
-        run_start_parameters: &RunStartParameters,
-    ) -> Result<(), WriterModuleCreationError> {
-        self.run_start_time_ms = run_start_parameters.start_time_ms;
-
-        self.group
-            .new_dataset::<f64>()
-            .shape(SimpleExtents::resizable([0]))
-            .chunk([32000]) // TODO: configurable chunk sizes.
-            .create("event_time_zero")
-            .err_parent_dataset(&self.group, "event_time_zero")?;
-
-        self.group
-            .new_dataset::<u32>()
-            .shape(SimpleExtents::resizable([0]))
-            .chunk([32000]) // TODO: configurable chunk sizes.
-            .create("event_id")
-            .err_parent_dataset(&self.group, "event_id")?;
-
-        self.group
-            .new_dataset::<f32>()
-            .shape(SimpleExtents::resizable([0]))
-            .chunk([32000]) // TODO: configurable chunk sizes.
-            .create("event_time_offset")
-            .err_parent_dataset(&self.group, "event_time_offset")?;
-
-        add_ascii_string_attribute(&self.group, "NX_class", "NXevent_data")?;
-        Ok(())
     }
 }
