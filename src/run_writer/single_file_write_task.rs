@@ -133,6 +133,11 @@ impl<'a> SingleFileWriteTask<'a> {
             }
         }
 
+        if self.run_start_parameters.stop_time_ms != u64::MAX {
+            info!("Run start included an explicit stop time at {} ms since epoch", self.run_start_parameters.stop_time_ms);
+            self.run_end_tracker.on_run_stop(self.run_start_parameters.stop_time_ms, consumer)?;
+        }
+
         loop {
             match consumer.poll(Duration::from_millis(
                 self.config.data_consumer_poll_time_ms,
@@ -281,6 +286,7 @@ mod tests {
             filename: FakeStream::TEST_FILENAME.into(),
             n_periods: 1,
             metadata: None,
+            instrument_name: "UNITTEST".to_owned(),
         };
 
         let consumer = FakeStream::default();

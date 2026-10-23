@@ -16,6 +16,7 @@ pub struct RunStartParameters {
     pub nexus_structure: String,
     pub job_id: String,
     pub filename: PathBuf,
+    pub instrument_name: String,
     pub n_periods: u32,
     pub metadata: Option<String>,
     pub control_topic: Option<String>,
@@ -41,6 +42,7 @@ impl RunStartParameters {
                 rs.filename()
                     .ok_or_else(|| FileWriterError::from_missing_runstart_data("filename", msg))?,
             ),
+            instrument_name: rs.instrument_name().unwrap_or("UNKNOWN").to_owned(),
             nexus_structure: rs
                 .nexus_structure()
                 .ok_or_else(|| FileWriterError::from_missing_runstart_data("nexus_structure", msg))?

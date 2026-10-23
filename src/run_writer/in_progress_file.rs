@@ -14,6 +14,7 @@ use isis_streaming_data_types::DeserializedMessage;
 use isis_streaming_data_types::flatbuffers_generated::run_stop_6s4t::RunStop;
 use log::{error, trace};
 use serde_json::Value;
+use crate::hdf::error::Hdf5Error;
 
 /// Represents a file which is in the process of being written to.
 pub struct InProgressFile<'a> {
@@ -166,6 +167,13 @@ impl<'a> InProgressFile<'a> {
         for writer in self.writers.iter_mut() {
             writer.flush()?;
         }
+        self.file.flush().map_err(|e| {
+            FileWriterError::Hdf5Error(Hdf5Error::WriteError {
+                cause: Box::new(e),
+                location: "/".to_owned(),
+                filename: self.file.name()
+            })
+        })?;
         Ok(())
     }
 }

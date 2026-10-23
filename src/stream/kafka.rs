@@ -2,12 +2,12 @@
 use crate::config::GlobalConfig;
 use crate::stream::error::StreamError;
 use crate::stream::traits::{Stream, TopicPartitionOffsets};
-use ahash::HashMap;
 use log::{debug, trace, warn};
 use rdkafka::consumer::{BaseConsumer, CommitMode, Consumer, ConsumerContext};
 use rdkafka::message::BorrowedMessage;
 use rdkafka::{ClientConfig, Message, Offset, TopicPartitionList};
 use std::time::Duration;
+use rayon::prelude::*;
 
 /// The type of Kafka consumer that we use at runtime.
 /// This is a newtype wrapper around an underlying
@@ -100,8 +100,6 @@ impl<C: ConsumerContext + 'static> Stream for KafkaStream<C> {
         timestamp: i64,
         timeout: Duration,
     ) -> Result<TopicPartitionOffsets, StreamError> {
-        let mut result = HashMap::default();
-
         let offsets = self
             .0
             .offsets_for_timestamp(timestamp, timeout)
@@ -109,26 +107,35 @@ impl<C: ConsumerContext + 'static> Stream for KafkaStream<C> {
                 cause: Box::new(err),
             })?;
 
-        for elem in offsets.elements() {
-            let real_offset = match elem.offset() {
-                Offset::Offset(o) => o,
-                Offset::End => {
-                    let (_, high_watermark) = self
-                        .0
-                        .fetch_watermarks(elem.topic(), elem.partition(), timeout)
-                        .map_err(|e| StreamError::OffsetsForTimestampError {
-                            cause: Box::new(e),
-                        })?;
-                    high_watermark
-                }
-                other => {
-                    return Err(StreamError::InvalidKafkaOffsetError {
-                        offset: Some(other),
-                    });
-                }
-            };
-            result.insert((elem.topic().to_owned(), elem.partition()), real_offset);
-        }
+        let elements = offsets.elements().iter()
+            .map(|elem| (elem.offset(), elem.topic().to_owned(), elem.partition()))
+            .collect::<Vec<_>>();
+
+        // Kafka doesn't expose a method to get watermarks for multiple topics in one call,
+        // so parallelize it using rayon instead.
+        let result = elements
+            .into_par_iter()
+            .map(|(offset, topic, partition)| {
+                let real_offset = match offset {
+                    Offset::Offset(o) => o,
+                    Offset::End => {
+                        let (_, high_watermark) = self
+                            .0
+                            .fetch_watermarks(topic.as_ref(), partition, timeout)
+                            .map_err(|e| StreamError::OffsetsForTimestampError {
+                                cause: Box::new(e),
+                            })?;
+                        high_watermark
+                    }
+                    other => {
+                        return Err(StreamError::InvalidKafkaOffsetError {
+                            offset: Some(other),
+                        });
+                    }
+                };
+                Ok(((topic, partition), real_offset))
+            })
+            .collect::<Result<TopicPartitionOffsets, StreamError>>()?;
 
         Ok(result)
     }
