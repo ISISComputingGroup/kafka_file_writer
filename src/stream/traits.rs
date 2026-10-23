@@ -1,8 +1,11 @@
 //! Common stream consumer traits and utilities
 use crate::stream::error::StreamError;
+use ahash::HashMap;
 use rdkafka::Message;
 use rdkafka::consumer::CommitMode;
 use std::time::Duration;
+
+pub type TopicPartitionOffsets = HashMap<(String, i32), i64>;
 
 /// Metadata about a message from Kafka
 #[derive(Debug, PartialEq, Eq)]
@@ -24,6 +27,12 @@ pub trait Stream {
     type Msg<'a>: Message
     where
         Self: 'a;
+
+    fn offsets_for_timestamp(
+        &self,
+        timestamp: i64,
+        timeout: Duration,
+    ) -> Result<TopicPartitionOffsets, StreamError>;
 
     fn assign_from_timestamp(
         &self,

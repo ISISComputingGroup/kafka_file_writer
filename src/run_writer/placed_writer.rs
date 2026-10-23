@@ -1,5 +1,6 @@
 //! Representation of a Writer module with a specific NeXus location it is writing to.
 use crate::error::FileWriterError;
+use crate::metrics::MODULE_PROCESSING_TIMES;
 use crate::run_writer::nexus_structure::{NexusStructureError, NexusWriterModule};
 use crate::run_writer::run_start_parameters::RunStartParameters;
 use crate::stream::traits::KafkaMessageMeta;
@@ -9,7 +10,9 @@ use crate::writer_module_factories::WriterModuleFactories;
 use isis_streaming_data_types::DeserializedMessage;
 use isis_streaming_data_types::flatbuffers_generated::run_stop_6s4t::RunStop;
 use log::warn;
-use std::ops::{Deref, DerefMut};
+use metrics::histogram;
+use std::ops::Deref;
+use std::time::Instant;
 
 #[derive(Debug)]
 pub struct PlacedWriter {
@@ -53,9 +56,6 @@ impl PlacedWriter {
     pub fn writer(&self) -> &dyn WriterModule {
         self.writer.deref()
     }
-    pub fn writer_mut(&mut self) -> &mut dyn WriterModule {
-        self.writer.deref_mut()
-    }
 
     pub fn group(&self) -> &hdf5::Group {
         &self.group
@@ -66,7 +66,8 @@ impl PlacedWriter {
         meta: &KafkaMessageMeta,
         msg: &DeserializedMessage,
     ) -> Result<(), FileWriterError> {
-        match self.writer.on_message(meta, msg) {
+        let start_time = Instant::now();
+        let result = match self.writer.on_message(meta, msg) {
             Ok(()) => Ok(()),
             Err(WriterModuleError::InvalidData(msg)) => {
                 warn!(
@@ -82,7 +83,10 @@ impl PlacedWriter {
                 module_path: self.group().name().to_owned(),
                 module_name: self.writer_name.to_owned(),
             }),
-        }
+        };
+        histogram!(MODULE_PROCESSING_TIMES, "module" => self.writer_name.to_owned())
+            .record(start_time.elapsed().as_secs_f64());
+        result
     }
 
     pub fn on_run_stop(
