@@ -1,18 +1,16 @@
 //! Rewrite a NeXus file from data in Kafka.
 
-use std::path::PathBuf;
 use clap::Parser;
 use kafka_file_writer::config::GlobalConfig;
 use kafka_file_writer::hdf::file_creator::FileCreator;
 use kafka_file_writer::metrics::initialize_metrics;
 use kafka_file_writer::metrics::kafka::MetricsKafkaContext;
-use kafka_file_writer::stream::kafka::{
-    KafkaStream, make_data_kafka_client_config,
-};
-use kafka_file_writer::writer_modules::default_registry;
-use miette::{IntoDiagnostic, Result};
 use kafka_file_writer::run_writer::run_start_parameters::RunStartParameters;
 use kafka_file_writer::run_writer::single_file_write_task::SingleFileWriteTask;
+use kafka_file_writer::stream::kafka::{KafkaStream, make_data_kafka_client_config};
+use kafka_file_writer::writer_modules::default_registry;
+use miette::{IntoDiagnostic, Result};
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -57,7 +55,7 @@ fn main() -> Result<()> {
 
     let stream = KafkaStream::from_config(
         &make_data_kafka_client_config(&config),
-        MetricsKafkaContext { name: "data" }
+        MetricsKafkaContext { name: "data" },
     )?;
 
     let nexus_structure = std::fs::read_to_string(args.nexus_structure).into_diagnostic()?;
@@ -77,7 +75,7 @@ fn main() -> Result<()> {
     let registry = default_registry();
 
     let mut task = SingleFileWriteTask::new(&config, &registry, &parameters);
-    task.write_data_for_run(&stream, FileCreator::Disk)?;
+    task.write_data_for_run(&stream, FileCreator::DiskOverwrite)?;
 
     Ok(())
 }

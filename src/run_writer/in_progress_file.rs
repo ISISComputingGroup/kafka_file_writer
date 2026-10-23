@@ -1,6 +1,7 @@
 //! Representation of a file which is in the process of being written to.
 use crate::error::FileWriterError;
 use crate::hdf::attr::{add_ascii_string_attribute, add_root_dataset_attributes};
+use crate::hdf::error::Hdf5Error;
 use crate::hdf::traits::Hdf5ErrorContext;
 use crate::run_writer::message_router::MessageRouter;
 use crate::run_writer::nexus_structure::{
@@ -14,7 +15,6 @@ use isis_streaming_data_types::DeserializedMessage;
 use isis_streaming_data_types::flatbuffers_generated::run_stop_6s4t::RunStop;
 use log::{error, trace};
 use serde_json::Value;
-use crate::hdf::error::Hdf5Error;
 
 /// Represents a file which is in the process of being written to.
 pub struct InProgressFile<'a> {
@@ -171,7 +171,7 @@ impl<'a> InProgressFile<'a> {
             FileWriterError::Hdf5Error(Hdf5Error::WriteError {
                 cause: Box::new(e),
                 location: "/".to_owned(),
-                filename: self.file.name()
+                filename: self.file.name(),
             })
         })?;
         Ok(())

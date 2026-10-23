@@ -134,8 +134,12 @@ impl<'a> SingleFileWriteTask<'a> {
         }
 
         if self.run_start_parameters.stop_time_ms != u64::MAX {
-            info!("Run start included an explicit stop time at {} ms since epoch", self.run_start_parameters.stop_time_ms);
-            self.run_end_tracker.on_run_stop(self.run_start_parameters.stop_time_ms, consumer)?;
+            info!(
+                "Run start included an explicit stop time at {} ms since epoch",
+                self.run_start_parameters.stop_time_ms
+            );
+            self.run_end_tracker
+                .on_run_stop(self.run_start_parameters.stop_time_ms, consumer)?;
         }
 
         loop {
@@ -279,7 +283,7 @@ mod tests {
 
         let rsp = RunStartParameters {
             start_time_ms: 123,
-            stop_time_ms: 456,
+            stop_time_ms: u64::MAX,
             job_id: FakeStream::TEST_JOB_ID.to_string(),
             nexus_structure: FakeStream::TEST_STRUCTURE.to_string(),
             control_topic: None,

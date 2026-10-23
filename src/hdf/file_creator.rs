@@ -6,6 +6,8 @@ use std::path::Path;
 pub enum FileCreator {
     /// On-disk - used at runtime
     Disk,
+    /// On-disk, overwrite existing file if present
+    DiskOverwrite,
     /// In-memory file - used for tests, and for structure_verify.
     Memory,
     /// A file factory that unconditionally fails to create a file
@@ -20,13 +22,15 @@ impl FileCreator {
                 .with_fapl(|fapl| fapl.libver_v110())
                 .create_excl(name),
 
+            Self::DiskOverwrite => hdf5::File::with_options()
+                .with_fapl(|fapl| fapl.libver_v110())
+                .create(name),
+
             Self::Memory => {
                 // Create with 64MB hdf5 increment (amount in-memory file grows by when
                 // it runs out of alloc'd memory)
                 hdf5::File::with_options()
-                    .with_fapl(|props| {
-                        props.libver_v110().core_options(64 * 1024 * 1024, false)
-                    })
+                    .with_fapl(|props| props.libver_v110().core_options(64 * 1024 * 1024, false))
                     // Sometimes fails to create if name is not unique...
                     .create_excl(format!("name-{}", uuid::Uuid::new_v4()))
             }
