@@ -5,7 +5,6 @@ data_consumer_poll_time_ms = 500
 job_pool_consumer_poll_time_ms = 500
 
 job_pool_topic = "NDW2922_runInfo"
-forced_nexus_structure_filepath = "structures/isis.json"
 file_output_directory = "C:\\tmp\\fw_output"
 exit_after_writing_one_file = false
 
