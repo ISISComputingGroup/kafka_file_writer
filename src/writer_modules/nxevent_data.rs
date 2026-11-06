@@ -24,7 +24,7 @@ pub struct NXeventdata {
     _config: NXeventdataConfig,
     group: hdf5::Group,
     run_start_time_ms: u64,
-    run_stop_time_ms: u64,
+    run_stop_time_ms: Option<u64>,
     latest_message_time_ms: u64,
 }
 
@@ -46,7 +46,9 @@ impl WriterModule for NXeventdata {
             })?;
 
             self.latest_message_time_ms = timestamp;
-            if timestamp < self.run_start_time_ms || timestamp > self.run_stop_time_ms {
+            if timestamp < self.run_start_time_ms
+                || self.run_stop_time_ms.is_some_and(|t| timestamp > t)
+            {
                 // This writer module doesn't write messages before / after run.
                 return Ok(());
             }
@@ -132,7 +134,7 @@ impl WriterModule for NXeventdata {
         _meta: &KafkaMessageMeta,
         message: &RunStop,
     ) -> Result<(), WriterModuleError> {
-        self.run_stop_time_ms = message.stop_time();
+        self.run_stop_time_ms = Some(message.stop_time());
         Ok(())
     }
 
