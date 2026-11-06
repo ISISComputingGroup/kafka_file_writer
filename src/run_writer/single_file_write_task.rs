@@ -33,11 +33,7 @@ impl<'a> SingleFileWriteTask<'a> {
         writer_module_factories: &'a WriterModuleFactories,
         run_start_parameters: &'a RunStartParameters,
     ) -> Self {
-        let run_end_tracker = RunEndTracker::new(
-            config,
-            Duration::from_millis(config.kafka_metadata_timeout_ms),
-            Duration::from_millis(config.post_run_settle_time_ms),
-        );
+        let run_end_tracker = RunEndTracker::new(config);
 
         SingleFileWriteTask {
             config,
@@ -130,7 +126,7 @@ impl<'a> SingleFileWriteTask<'a> {
         }
 
         if let Some(stop_time) = self.run_start_parameters.stop_time_ms {
-            self.run_end_tracker.on_run_stop(stop_time, consumer)?;
+            self.run_end_tracker.on_run_stop(stop_time, consumer);
         }
 
         loop {
@@ -244,7 +240,7 @@ impl<'a> SingleFileWriteTask<'a> {
         );
         in_progress_file.on_run_stop(meta, run_stop)?;
         self.run_end_tracker
-            .on_run_stop(run_stop.stop_time(), consumer)?;
+            .on_run_stop(run_stop.stop_time(), consumer);
         Ok(())
     }
 }

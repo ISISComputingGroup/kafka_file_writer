@@ -44,22 +44,14 @@ pub struct RunEndTracker<'a> {
     config: &'a GlobalConfig,
     state: State,
     consumed: TopicPartitionOffsets,
-    kafka_metadata_timeout: Duration,
-    post_run_settle_time: Duration,
 }
 
 impl<'a> RunEndTracker<'a> {
-    pub fn new(
-        config: &'a GlobalConfig,
-        kafka_metadata_timeout: Duration,
-        post_run_settle_time: Duration,
-    ) -> Self {
+    pub fn new(config: &'a GlobalConfig) -> Self {
         RunEndTracker {
             config,
             state: State::Running,
             consumed: HashMap::new(),
-            kafka_metadata_timeout,
-            post_run_settle_time,
         }
     }
 
@@ -82,14 +74,10 @@ impl<'a> RunEndTracker<'a> {
             .or_insert(meta.offset);
     }
 
-    pub fn on_run_stop(
-        &mut self,
-        run_stop_timestamp_ms: u64,
-        consumer: &impl Stream,
-    ) -> Result<(), StreamError> {
+    pub fn on_run_stop(&mut self, run_stop_timestamp_ms: u64, consumer: &impl Stream) {
         let stop_listening_at = UNIX_EPOCH
             .checked_add(Duration::from_millis(run_stop_timestamp_ms))
-            .and_then(|t| t.checked_add(self.post_run_settle_time))
+            .and_then(|t| t.checked_add(Duration::from_millis(self.config.post_run_settle_time_ms)))
             .unwrap_or(*SYSTEMTIME_MAX)
             .min(*SYSTEMTIME_MAX);
 
@@ -98,10 +86,7 @@ impl<'a> RunEndTracker<'a> {
                 Ok(end_offsets) => break end_offsets,
                 Err(e) => {
                     let report = Report::from(e);
-                    warn!(
-                        "Error while getting initial offsets (will retry): {:?}",
-                        report
-                    );
+                    warn!("Error while getting end offsets (will retry): {:?}", report);
                     thread::sleep(Duration::from_millis(self.config.stream_error_backoff_ms));
                 }
             }
@@ -111,7 +96,6 @@ impl<'a> RunEndTracker<'a> {
             stop_listening_at,
             end_offsets,
         };
-        Ok(())
     }
 
     fn get_end_offsets(
@@ -126,8 +110,10 @@ impl<'a> RunEndTracker<'a> {
             .try_into()
             .map_err(|e| StreamError::OffsetsForTimestampError { cause: Box::new(e) })?;
 
-        let end_offsets =
-            consumer.offsets_for_timestamp(kafka_stop_timestamp, self.kafka_metadata_timeout)?;
+        let end_offsets = consumer.offsets_for_timestamp(
+            kafka_stop_timestamp,
+            Duration::from_millis(self.config.kafka_metadata_timeout_ms),
+        )?;
 
         debug!("New run-end target offsets: {:?}", end_offsets);
 
@@ -198,8 +184,7 @@ mod tests {
      {
         let config = GlobalConfig::test_config();
         let consumer = FakeStream::default();
-        let mut ret =
-            RunEndTracker::new(&config, Duration::from_millis(100), Duration::from_secs(5));
+        let mut ret = RunEndTracker::new(&config);
 
         let stop_timestamp = 123456789;
 
@@ -208,7 +193,7 @@ mod tests {
 
         *consumer.offsets_for_timestamp.borrow_mut() = end_offsets;
 
-        ret.on_run_stop(stop_timestamp, &consumer).unwrap();
+        ret.on_run_stop(stop_timestamp, &consumer);
 
         // Consume a message which doesn't correspond to the end of what we need to consume
         // Not done yet
@@ -236,8 +221,7 @@ mod tests {
     fn test_stop_time_in_future_is_not_complete() {
         let config = GlobalConfig::test_config();
         // note: no end offsets, so completion time is the only condition
-        let mut ret =
-            RunEndTracker::new(&config, Duration::from_millis(100), Duration::from_secs(5));
+        let mut ret = RunEndTracker::new(&config);
         let consumer = FakeStream::default();
 
         ret.on_run_stop(
@@ -248,8 +232,7 @@ mod tests {
                 .try_into()
                 .unwrap(),
             &consumer,
-        )
-        .unwrap();
+        );
 
         assert!(!ret.poll_complete(&consumer).unwrap());
     }
@@ -258,8 +241,7 @@ mod tests {
     fn test_stop_time_in_past_is_complete() {
         let config = GlobalConfig::test_config();
         // note: no end offsets, so completion time is the only condition
-        let mut ret =
-            RunEndTracker::new(&config, Duration::from_millis(100), Duration::from_secs(5));
+        let mut ret = RunEndTracker::new(&config);
         let consumer = FakeStream::default();
 
         ret.on_run_stop(
@@ -270,8 +252,7 @@ mod tests {
                 .try_into()
                 .unwrap(),
             &consumer,
-        )
-        .unwrap();
+        );
 
         assert!(ret.poll_complete(&consumer).unwrap());
     }
@@ -280,9 +261,9 @@ mod tests {
     fn test_stop_time_in_past_is_not_complete_if_settle_time_has_not_elapsed() {
         // note: no end offsets, so completion time is the only condition
         // 5 minute post-run settle time
-        let config = GlobalConfig::test_config();
-        let mut ret =
-            RunEndTracker::new(&config, Duration::from_millis(100), Duration::from_mins(5));
+        let mut config = GlobalConfig::test_config();
+        config.post_run_settle_time_ms = 5 * 60 * 1000;
+        let mut ret = RunEndTracker::new(&config);
         let consumer = FakeStream::default();
 
         // Run stop was "2 minutes ago"
@@ -294,8 +275,7 @@ mod tests {
                 .try_into()
                 .unwrap(),
             &consumer,
-        )
-        .unwrap();
+        );
 
         assert!(!ret.poll_complete(&consumer).unwrap());
     }
