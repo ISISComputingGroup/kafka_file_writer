@@ -20,7 +20,6 @@ pub struct InProgressFile<'a> {
     file: hdf5::File,
     writers: Vec<PlacedWriter>,
     run_start_parameters: &'a RunStartParameters,
-    run_stop_received: bool,
     router: MessageRouter,
 }
 
@@ -36,7 +35,6 @@ impl<'a> InProgressFile<'a> {
             writers: vec![],
             run_start_parameters,
             router: MessageRouter::default(),
-            run_stop_received: false,
         };
 
         result.use_structure(structure, factories)?;
@@ -134,10 +132,6 @@ impl<'a> InProgressFile<'a> {
         &self.run_start_parameters.job_id
     }
 
-    pub fn finished(&self) -> bool {
-        self.run_stop_received && self.writers.iter().all(|w| w.writer().finished())
-    }
-
     pub fn on_message(
         &mut self,
         meta: &KafkaMessageMeta,
@@ -165,7 +159,13 @@ impl<'a> InProgressFile<'a> {
         for writer in self.writers.iter_mut() {
             writer.on_run_stop(meta, run_stop)?;
         }
-        self.run_stop_received = true;
+        Ok(())
+    }
+
+    pub fn flush(&mut self) -> Result<(), FileWriterError> {
+        for writer in self.writers.iter_mut() {
+            writer.flush()?;
+        }
         Ok(())
     }
 }
@@ -215,10 +215,6 @@ mod tests {
 
         fn flush(&mut self) -> Result<(), WriterModuleError> {
             Ok(())
-        }
-
-        fn finished(&self) -> bool {
-            false
         }
     }
 
@@ -271,7 +267,6 @@ mod tests {
             let ipf = InProgressFile::new(f, &rsp, empty_structure(), &default_registry()).unwrap();
             assert_eq!(ipf.topics().collect::<Vec<&str>>(), Vec::<&str>::new());
             assert_eq!(ipf.job_id(), rsp.job_id);
-            assert!(!ipf.run_stop_received);
             Ok(())
         })
         .unwrap();
