@@ -742,6 +742,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69c883c565498492954e344c482f8622525e58c7a71100dd9498c4940da82885"
 dependencies = [
  "cmake",
+ "libz-sys",
 ]
 
 [[package]]
@@ -753,6 +754,7 @@ dependencies = [
  "hdf5-metno-src",
  "libc",
  "libloading",
+ "libz-sys",
  "parking_lot",
  "pkg-config",
  "regex",
@@ -1040,8 +1042,10 @@ dependencies = [
  "isis_streaming_data_types",
  "itertools 0.15.0",
  "log",
+ "metrics",
  "metrics-exporter-prometheus",
  "miette",
+ "rayon",
  "rdkafka",
  "serde",
  "serde_json",

@@ -1,23 +1,23 @@
 //! Definition of a stream consumer backed by Kafka.
 use crate::config::GlobalConfig;
 use crate::stream::error::StreamError;
-use crate::stream::traits::Stream;
+use crate::stream::traits::{Stream, TopicPartitionOffsets};
 use log::{debug, trace, warn};
-use miette::Result;
-use rdkafka::consumer::{BaseConsumer, CommitMode, Consumer, DefaultConsumerContext};
+use rdkafka::consumer::{BaseConsumer, CommitMode, Consumer, ConsumerContext};
 use rdkafka::message::BorrowedMessage;
 use rdkafka::{ClientConfig, Message, Offset, TopicPartitionList};
 use std::time::Duration;
+use rayon::prelude::*;
 
 /// The type of Kafka consumer that we use at runtime.
 /// This is a newtype wrapper around an underlying
 /// rdkafka type.
-pub struct KafkaStream(BaseConsumer<DefaultConsumerContext>);
+pub struct KafkaStream<C: ConsumerContext>(BaseConsumer<C>);
 
-impl KafkaStream {
-    pub fn from_config(config: &ClientConfig) -> Result<KafkaStream, StreamError> {
+impl<C: ConsumerContext> KafkaStream<C> {
+    pub fn from_config(config: &ClientConfig, context: C) -> Result<KafkaStream<C>, StreamError> {
         config
-            .create()
+            .create_with_context(context)
             .map(KafkaStream)
             .map_err(|e| StreamError::ConsumerCreationError { cause: Box::new(e) })
     }
@@ -57,46 +57,88 @@ pub fn make_data_kafka_client_config(config: &GlobalConfig) -> ClientConfig {
     client_config
 }
 
-fn partitions_for(
-    consumer: &KafkaStream,
-    topic: &str,
-    timeout: Duration,
-) -> Result<Vec<i32>, StreamError> {
-    let metadata = consumer
-        .0
-        .fetch_metadata(Some(topic), timeout)
-        .map_err(|err| StreamError::MissingMetadata {
-            cause: Some(Box::new(err)),
-            topic: topic.to_owned(),
-            context: "fetching metadata",
-            err_code: None,
+impl<C: ConsumerContext> KafkaStream<C> {
+    fn partitions_for(&self, topic: &str, timeout: Duration) -> Result<Vec<i32>, StreamError> {
+        let metadata = self.0.fetch_metadata(Some(topic), timeout).map_err(|err| {
+            StreamError::MissingMetadata {
+                cause: Some(Box::new(err)),
+                topic: topic.to_owned(),
+                context: "fetching metadata",
+                err_code: None,
+            }
         })?;
 
-    let t = metadata
-        .topics()
-        .iter()
-        .find(|t| t.name() == topic)
-        .ok_or_else(|| StreamError::MissingMetadata {
-            cause: None,
-            topic: topic.to_owned(),
-            context: "finding topic in fetched metadata",
-            err_code: None,
-        })?;
+        let t = metadata
+            .topics()
+            .iter()
+            .find(|t| t.name() == topic)
+            .ok_or_else(|| StreamError::MissingMetadata {
+                cause: None,
+                topic: topic.to_owned(),
+                context: "finding topic in fetched metadata",
+                err_code: None,
+            })?;
 
-    if let Some(e) = t.error() {
-        return Err(StreamError::MissingMetadata {
-            cause: None,
-            topic: topic.to_owned(),
-            context: "error returned from fetching metadata",
-            err_code: Some(e.into()),
-        });
+        if let Some(e) = t.error() {
+            return Err(StreamError::MissingMetadata {
+                cause: None,
+                topic: topic.to_owned(),
+                context: "error returned from fetching metadata",
+                err_code: Some(e.into()),
+            });
+        }
+
+        Ok(t.partitions().iter().map(|p| p.id()).collect())
     }
-
-    Ok(t.partitions().iter().map(|p| p.id()).collect())
 }
 
-impl Stream for KafkaStream {
+impl<C: ConsumerContext + 'static> Stream for KafkaStream<C> {
     type Msg<'a> = BorrowedMessage<'a>;
+
+    fn offsets_for_timestamp(
+        &self,
+        timestamp: i64,
+        timeout: Duration,
+    ) -> Result<TopicPartitionOffsets, StreamError> {
+        let offsets = self
+            .0
+            .offsets_for_timestamp(timestamp, timeout)
+            .map_err(|err| StreamError::OffsetsForTimestampError {
+                cause: Box::new(err),
+            })?;
+
+        let elements = offsets.elements().iter()
+            .map(|elem| (elem.offset(), elem.topic().to_owned(), elem.partition()))
+            .collect::<Vec<_>>();
+
+        // Kafka doesn't expose a method to get watermarks for multiple topics in one call,
+        // so parallelize it using rayon instead.
+        let result = elements
+            .into_par_iter()
+            .map(|(offset, topic, partition)| {
+                let real_offset = match offset {
+                    Offset::Offset(o) => o,
+                    Offset::End => {
+                        let (_, high_watermark) = self
+                            .0
+                            .fetch_watermarks(topic.as_ref(), partition, timeout)
+                            .map_err(|e| StreamError::OffsetsForTimestampError {
+                                cause: Box::new(e),
+                            })?;
+                        high_watermark
+                    }
+                    other => {
+                        return Err(StreamError::InvalidKafkaOffsetError {
+                            offset: Some(other),
+                        });
+                    }
+                };
+                Ok(((topic, partition), real_offset))
+            })
+            .collect::<Result<TopicPartitionOffsets, StreamError>>()?;
+
+        Ok(result)
+    }
 
     fn assign_from_timestamp(
         &self,
@@ -112,7 +154,7 @@ impl Stream for KafkaStream {
         let mut timestamps = TopicPartitionList::new();
 
         for &topic in topics {
-            for partition in partitions_for(self, topic, timeout)? {
+            for partition in self.partitions_for(topic, timeout)? {
                 timestamps
                     .add_partition_offset(topic, partition, Offset::Offset(timestamp))
                     .map_err(|e| StreamError::AssignmentError {
