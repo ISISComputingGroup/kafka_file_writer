@@ -1,5 +1,7 @@
 //! Error types returned by `Stream` functions.
+
 use miette::Diagnostic;
+use rdkafka::Offset;
 use rdkafka::error::RDKafkaErrorCode;
 use thiserror::Error;
 
@@ -50,6 +52,15 @@ pub enum StreamError {
         partition: i32,
         offset: i64,
     },
+
+    #[error("Failed getting offsets for timestamp")]
+    OffsetsForTimestampError {
+        #[source]
+        cause: Box<DynErr>,
+    },
+
+    #[error("Invalid Kafka offset {:?}", offset)]
+    InvalidKafkaOffsetError { offset: Option<Offset> },
 
     #[cfg(test)]
     #[error("Error injected by unit test")]

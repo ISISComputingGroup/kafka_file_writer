@@ -13,6 +13,9 @@ pub enum Hdf5Error {
         location: String,
     },
 
+    #[error("Invalid/unexpected shape of dataset at {} ({})", location, filename)]
+    ShapeError { filename: String, location: String },
+
     #[error("Failed to write to {} ({})", location, filename)]
     WriteError {
         #[source]

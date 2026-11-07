@@ -3,6 +3,7 @@
 use crate::config::GlobalConfig;
 use crate::error::FileWriterError;
 use crate::run_writer::nexus_structure::NexusFileStructure;
+use chrono::DateTime;
 use isis_streaming_data_types::flatbuffers_generated::run_start_pl72::RunStart;
 use log::{debug, info, trace, warn};
 use rdkafka::Message;
@@ -16,6 +17,7 @@ pub struct RunStartParameters {
     pub nexus_structure: String,
     pub job_id: String,
     pub filename: PathBuf,
+    pub instrument_name: String,
     pub n_periods: u32,
     pub metadata: Option<String>,
     pub control_topic: Option<String>,
@@ -41,6 +43,7 @@ impl RunStartParameters {
                 rs.filename()
                     .ok_or_else(|| FileWriterError::from_missing_runstart_data("filename", msg))?,
             ),
+            instrument_name: rs.instrument_name().unwrap_or("UNKNOWN").to_owned(),
             nexus_structure: rs
                 .nexus_structure()
                 .ok_or_else(|| FileWriterError::from_missing_runstart_data("nexus_structure", msg))?
@@ -90,6 +93,14 @@ impl RunStartParameters {
                 &config.job_pool_topic
             }
         }
+    }
+
+    /// Get the (computer) run start time as an ISO8601 String (UTC timezone).
+    /// Returns None if the start time cannot be represented as ISO8601.
+    pub fn start_time_as_iso8601(&self) -> Option<String> {
+        let start_time: i64 = self.start_time_ms.try_into().ok()?;
+        let dt = DateTime::from_timestamp_millis(start_time)?;
+        Some(format!("{}", dt.format("%Y-%m-%dT%H:%M:%S%.3fZ")))
     }
 }
 
