@@ -12,7 +12,7 @@ use std::path::PathBuf;
 #[derive(Debug, PartialEq, Eq, Default)]
 pub struct RunStartParameters {
     pub start_time_ms: u64,
-    pub stop_time_ms: u64,
+    pub stop_time_ms: Option<u64>,
     pub nexus_structure: String,
     pub job_id: String,
     pub filename: PathBuf,
@@ -31,8 +31,8 @@ impl RunStartParameters {
     ) -> Result<RunStartParameters, FileWriterError> {
         let stop_time = match rs.stop_time() {
             // If a stop time is not provided, write "forever" until we get a run-stop message.
-            0 => u64::MAX,
-            t => t,
+            0 => None,
+            t => Some(t),
         };
 
         Ok(RunStartParameters {

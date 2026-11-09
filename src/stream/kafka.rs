@@ -3,11 +3,11 @@ use crate::config::GlobalConfig;
 use crate::stream::error::StreamError;
 use crate::stream::traits::{Stream, TopicPartitionOffsets};
 use log::{debug, trace, warn};
+use rayon::prelude::*;
 use rdkafka::consumer::{BaseConsumer, CommitMode, Consumer, ConsumerContext};
 use rdkafka::message::BorrowedMessage;
 use rdkafka::{ClientConfig, Message, Offset, TopicPartitionList};
 use std::time::Duration;
-use rayon::prelude::*;
 
 /// The type of Kafka consumer that we use at runtime.
 /// This is a newtype wrapper around an underlying
@@ -107,7 +107,9 @@ impl<C: ConsumerContext + 'static> Stream for KafkaStream<C> {
                 cause: Box::new(err),
             })?;
 
-        let elements = offsets.elements().iter()
+        let elements = offsets
+            .elements()
+            .iter()
             .map(|elem| (elem.offset(), elem.topic().to_owned(), elem.partition()))
             .collect::<Vec<_>>();
 

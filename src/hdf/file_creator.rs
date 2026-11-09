@@ -24,9 +24,7 @@ impl FileCreator {
                 // Create with 64MB hdf5 increment (amount in-memory file grows by when
                 // it runs out of alloc'd memory)
                 hdf5::File::with_options()
-                    .with_fapl(|props| {
-                        props.libver_v110().core_options(64 * 1024 * 1024, false)
-                    })
+                    .with_fapl(|props| props.libver_v110().core_options(64 * 1024 * 1024, false))
                     // Sometimes fails to create if name is not unique...
                     .create_excl(format!("name-{}", uuid::Uuid::new_v4()))
             }

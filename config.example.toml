@@ -1,12 +1,11 @@
-stream_seek_back_in_time_ms = 60000
-stream_settle_time_ms = 10000
+pre_run_seek_time_ms = 60000
+post_run_settle_time_ms = 10000
 
 stream_error_backoff_ms = 3000
 data_consumer_poll_time_ms = 500
 job_pool_consumer_poll_time_ms = 500
 
 job_pool_topic = "NDW2922_runInfo"
-forced_nexus_structure_filepath = "structures/isis.json"
 file_output_directory = "C:\\tmp\\fw_output"
 exit_after_writing_one_file = false
 
