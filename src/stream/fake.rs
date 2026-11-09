@@ -168,6 +168,7 @@ impl FakeStream {
             job_id: Some(fbb.create_string(Self::TEST_JOB_ID)),
             service_id: Some(fbb.create_string(Self::TEST_SERVICE_ID)),
             command_id: None,
+            abort: false,
         };
 
         let buf = RunStop::create(&mut fbb, &args);
