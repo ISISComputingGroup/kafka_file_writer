@@ -1,4 +1,5 @@
 //! Main file-writer executable.
+
 use clap::Parser;
 use kafka_file_writer::config::GlobalConfig;
 use kafka_file_writer::file_writer::FileWriter;
@@ -9,7 +10,9 @@ use kafka_file_writer::stream::kafka::{
     KafkaStream, make_data_kafka_client_config, make_job_pool_kafka_client_config,
 };
 use kafka_file_writer::writer_modules::default_registry;
-use miette::{IntoDiagnostic, Result};
+use log::debug;
+use miette::{Context, IntoDiagnostic, Result};
+use std::fs::create_dir_all;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -53,6 +56,21 @@ fn main() -> Result<()> {
         },
         file_factory: FileCreator::Disk,
     };
+
+    if config.file_output_directory.is_dir() {
+        debug!("File output directory already exists");
+    } else {
+        // Create file output directory and parents if it doesn't already exist
+        debug!("Creating file output directory");
+        create_dir_all(&config.file_output_directory)
+            .into_diagnostic()
+            .wrap_err_with(|| {
+                format!(
+                    "Failed to create file output directory {:?}",
+                    config.file_output_directory
+                )
+            })?;
+    }
 
     file_writer.write_files()?;
     Ok(())
