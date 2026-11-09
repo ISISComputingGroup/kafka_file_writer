@@ -108,7 +108,7 @@ mod tests {
         assert_eq!(consumer.messages.borrow().len(), 1);
 
         assert_eq!(params.start_time_ms, FakeStream::TEST_START_TIME);
-        assert_eq!(params.stop_time_ms, u64::MAX);
+        assert_eq!(params.stop_time_ms, None);
         assert_eq!(
             format!("{}", params.filename.display()),
             FakeStream::TEST_FILENAME

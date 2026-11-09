@@ -61,7 +61,7 @@ type TotalCountsType = u64;
 #[derive(Debug)]
 pub struct NXeventdata {
     run_start_time_ms: u64,
-    run_stop_time_ms: u64,
+    run_stop_time_ms: Option<u64>,
     partial_frames: HashMap<(String, i32), PartialFrame>,
     current_event_index: u64,
     current_event_frame_number: i32,
@@ -79,7 +79,11 @@ impl NXeventdata {
     }
 
     fn run_stop_time_ns(&self) -> i64 {
-        (self.run_stop_time_ms.try_into().unwrap_or(i64::MAX)).saturating_mul(1_000_000)
+        (self
+            .run_stop_time_ms
+            .and_then(|t| t.try_into().ok())
+            .unwrap_or(i64::MAX))
+        .saturating_mul(1_000_000)
     }
 }
 
@@ -178,7 +182,7 @@ impl WriterModule for NXeventdata {
         _meta: &KafkaMessageMeta,
         message: &RunStop,
     ) -> Result<(), WriterModuleError> {
-        self.run_stop_time_ms = message.stop_time();
+        self.run_stop_time_ms = Some(message.stop_time());
         Ok(())
     }
 
@@ -304,7 +308,7 @@ mod tests {
             &RunStartParameters {
                 instrument_name: "GREATINSTRUMENT".to_string(),
                 start_time_ms,
-                stop_time_ms,
+                stop_time_ms: Some(stop_time_ms),
                 ..Default::default()
             },
             NXeventdataConfig {

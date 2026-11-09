@@ -29,7 +29,7 @@ pub struct SingleFileWriteTask<'a> {
     config: &'a GlobalConfig,
     writer_module_factories: &'a WriterModuleFactories,
     run_start_parameters: &'a RunStartParameters,
-    run_end_tracker: RunEndTracker,
+    run_end_tracker: RunEndTracker<'a>,
 }
 
 impl<'a> SingleFileWriteTask<'a> {
@@ -38,10 +38,7 @@ impl<'a> SingleFileWriteTask<'a> {
         writer_module_factories: &'a WriterModuleFactories,
         run_start_parameters: &'a RunStartParameters,
     ) -> Self {
-        let run_end_tracker = RunEndTracker::new(
-            Duration::from_millis(config.kafka_metadata_timeout_ms),
-            Duration::from_millis(config.stream_settle_time_ms),
-        );
+        let run_end_tracker = RunEndTracker::new(config);
 
         SingleFileWriteTask {
             config,
@@ -72,7 +69,7 @@ impl<'a> SingleFileWriteTask<'a> {
             let seek_timestamp: i64 = self
                 .run_start_parameters
                 .start_time_ms
-                .saturating_sub(self.config.stream_seek_back_in_time_ms)
+                .saturating_sub(self.config.pre_run_seek_time_ms)
                 .try_into()
                 .map_err(|e| FileWriterError::IntegerError {
                     cause: e,
@@ -133,13 +130,12 @@ impl<'a> SingleFileWriteTask<'a> {
             }
         }
 
-        if self.run_start_parameters.stop_time_ms != u64::MAX {
+        if let Some(stop_time) = self.run_start_parameters.stop_time_ms {
             info!(
                 "Run start included an explicit stop time at {} ms since epoch",
-                self.run_start_parameters.stop_time_ms
+                stop_time
             );
-            self.run_end_tracker
-                .on_run_stop(self.run_start_parameters.stop_time_ms, consumer)?;
+            self.run_end_tracker.on_run_stop(stop_time, consumer);
         }
 
         loop {
@@ -266,7 +262,7 @@ impl<'a> SingleFileWriteTask<'a> {
         );
         in_progress_file.on_run_stop(meta, run_stop)?;
         self.run_end_tracker
-            .on_run_stop(run_stop.stop_time(), consumer)?;
+            .on_run_stop(run_stop.stop_time(), consumer);
         Ok(())
     }
 }
@@ -283,7 +279,7 @@ mod tests {
 
         let rsp = RunStartParameters {
             start_time_ms: 123,
-            stop_time_ms: u64::MAX,
+            stop_time_ms: None,
             job_id: FakeStream::TEST_JOB_ID.to_string(),
             nexus_structure: FakeStream::TEST_STRUCTURE.to_string(),
             control_topic: None,

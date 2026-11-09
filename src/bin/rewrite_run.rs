@@ -65,7 +65,7 @@ fn main() -> Result<()> {
         instrument_name: args.instrument_name,
         job_id: uuid::Uuid::new_v4().to_string(),
         start_time_ms: args.start_time_ms,
-        stop_time_ms: args.stop_time_ms,
+        stop_time_ms: Some(args.stop_time_ms),
         nexus_structure,
         metadata: None,
         n_periods: args.n_periods,
