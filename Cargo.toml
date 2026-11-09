@@ -17,6 +17,7 @@ ahash = { version = "0.8.12", features = ["serde"] }
 # Logging and metrics
 log = "0.4.34"
 env_logger = "0.11.11"
+metrics = "0.24.6"
 metrics-exporter-prometheus = { version = "0.18.3" }
 
 # Deserialization from JSON/toml

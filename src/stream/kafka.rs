@@ -4,7 +4,7 @@ use crate::stream::error::StreamError;
 use crate::stream::traits::{Stream, TopicPartitionOffsets};
 use ahash::HashMap;
 use log::{debug, trace, warn};
-use rdkafka::consumer::{BaseConsumer, CommitMode, Consumer, DefaultConsumerContext};
+use rdkafka::consumer::{BaseConsumer, CommitMode, Consumer, ConsumerContext};
 use rdkafka::message::BorrowedMessage;
 use rdkafka::{ClientConfig, Message, Offset, TopicPartitionList};
 use std::time::Duration;
@@ -12,12 +12,12 @@ use std::time::Duration;
 /// The type of Kafka consumer that we use at runtime.
 /// This is a newtype wrapper around an underlying
 /// rdkafka type.
-pub struct KafkaStream(BaseConsumer<DefaultConsumerContext>);
+pub struct KafkaStream<C: ConsumerContext>(BaseConsumer<C>);
 
-impl KafkaStream {
-    pub fn from_config(config: &ClientConfig) -> Result<KafkaStream, StreamError> {
+impl<C: ConsumerContext> KafkaStream<C> {
+    pub fn from_config(config: &ClientConfig, context: C) -> Result<KafkaStream<C>, StreamError> {
         config
-            .create()
+            .create_with_context(context)
             .map(KafkaStream)
             .map_err(|e| StreamError::ConsumerCreationError { cause: Box::new(e) })
     }
@@ -57,7 +57,7 @@ pub fn make_data_kafka_client_config(config: &GlobalConfig) -> ClientConfig {
     client_config
 }
 
-impl KafkaStream {
+impl<C: ConsumerContext> KafkaStream<C> {
     fn partitions_for(&self, topic: &str, timeout: Duration) -> Result<Vec<i32>, StreamError> {
         let metadata = self.0.fetch_metadata(Some(topic), timeout).map_err(|err| {
             StreamError::MissingMetadata {
@@ -92,7 +92,7 @@ impl KafkaStream {
     }
 }
 
-impl Stream for KafkaStream {
+impl<C: ConsumerContext + 'static> Stream for KafkaStream<C> {
     type Msg<'a> = BorrowedMessage<'a>;
 
     fn offsets_for_timestamp(
