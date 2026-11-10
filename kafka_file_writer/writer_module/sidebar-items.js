@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["WriterModuleCreationError","WriterModuleError"],"struct":["WriterModuleCreateResult"],"trait":["WriterModule","WriterModuleSpec"]};

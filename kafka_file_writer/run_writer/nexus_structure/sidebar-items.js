@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["NexusStructureError","NexusStructureItem"],"struct":["NexusFileStructure","NexusGroup","NexusWriterModule"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["make_data_kafka_client_config","make_job_pool_kafka_client_config"],"struct":["KafkaStream"]};
