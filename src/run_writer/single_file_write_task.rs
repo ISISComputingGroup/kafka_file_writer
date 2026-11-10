@@ -282,6 +282,7 @@ mod tests {
             filename: FakeStream::TEST_FILENAME.into(),
             n_periods: 1,
             metadata: None,
+            instrument_name: "UNITTEST".to_owned(),
         };
 
         let consumer = FakeStream::default();

@@ -1,6 +1,7 @@
 //! Representation of a file which is in the process of being written to.
 use crate::error::FileWriterError;
 use crate::hdf::attr::{add_ascii_string_attribute, add_root_dataset_attributes};
+use crate::hdf::error::Hdf5Error;
 use crate::hdf::traits::Hdf5ErrorContext;
 use crate::run_writer::message_router::MessageRouter;
 use crate::run_writer::nexus_structure::{
@@ -166,6 +167,13 @@ impl<'a> InProgressFile<'a> {
         for writer in self.writers.iter_mut() {
             writer.flush()?;
         }
+        self.file.flush().map_err(|e| {
+            FileWriterError::Hdf5Error(Hdf5Error::WriteError {
+                cause: Box::new(e),
+                location: "/".to_owned(),
+                filename: self.file.name(),
+            })
+        })?;
         Ok(())
     }
 }
