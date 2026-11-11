@@ -54,6 +54,8 @@ bench = []
 
 [dev-dependencies]
 criterion = { version = "0.8.2",  features = ["html_reports"]}
+rand = "0.10.3"
+rand_distr = "0.6.0"
 
 [lints.clippy]
 indexing_slicing = "deny"
@@ -73,3 +75,8 @@ doctest = false
 [profile.release]
 lto = "thin"
 codegen-units = 1
+
+[[bench]]
+name = "nxevent_data"
+harness = false
+required-features = ["bench"]

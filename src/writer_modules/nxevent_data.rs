@@ -48,7 +48,10 @@ impl PartialFrame {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct NXeventdataConfig {
-    topic: String,
+    pub topic: String,
+
+    #[serde(default)]
+    pub compression_level: Option<u8>,
 }
 
 type EventFrameNumberType = i32;
@@ -229,15 +232,37 @@ impl WriterModuleSpec for NXeventdata {
             SubscriptionKey::All,
         )];
 
-        let event_frame_number =
-            AppendableDataset1D::create_dataset(&group, "event_frame_number", 4 * 1024)?;
-        let event_index = AppendableDataset1D::create_dataset(&group, "event_index", 4 * 1024)?;
-        let event_time_zero =
-            AppendableDataset1D::create_dataset(&group, "event_time_zero", 4 * 1024)?;
-        let event_id = AppendableDataset1D::create_dataset(&group, "event_id", 4 * 1024 * 1024)?;
-        let event_time_offset =
-            AppendableDataset1D::create_dataset(&group, "event_time_offset", 4 * 1024 * 1024)?;
-        let total_counts = AppendableDataset1D::create_dataset(&group, "total_counts", 1)?;
+        let event_frame_number = AppendableDataset1D::create_dataset(
+            &group,
+            "event_frame_number",
+            4 * 1024,
+            config.compression_level,
+        )?;
+        let event_index = AppendableDataset1D::create_dataset(
+            &group,
+            "event_index",
+            4 * 1024,
+            config.compression_level,
+        )?;
+        let event_time_zero = AppendableDataset1D::create_dataset(
+            &group,
+            "event_time_zero",
+            4 * 1024,
+            config.compression_level,
+        )?;
+        let event_id = AppendableDataset1D::create_dataset(
+            &group,
+            "event_id",
+            4 * 1024,
+            config.compression_level,
+        )?;
+        let event_time_offset = AppendableDataset1D::create_dataset(
+            &group,
+            "event_time_offset",
+            4 * 1024,
+            config.compression_level,
+        )?;
+        let total_counts = AppendableDataset1D::create_dataset(&group, "total_counts", 1, None)?;
 
         add_ascii_string_attribute(&group, "NX_class", "NXevent_data")?;
         add_ascii_string_attribute(event_time_offset.raw_dataset(), "units", "microsecond")?;
@@ -317,6 +342,7 @@ mod tests {
             },
             NXeventdataConfig {
                 topic: TOPIC.to_string(),
+                compression_level: None,
             },
         )
         .unwrap();

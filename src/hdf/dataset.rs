@@ -11,17 +11,28 @@ pub struct AppendableDataset1D<T: H5Type> {
 }
 
 impl<T: H5Type> AppendableDataset1D<T> {
+    /// Create an appendable dataset, with a specified chunk size (in elements)
+    /// and an optional GZIP compression level.
+    ///
+    /// Note that GZIP level 1 has an overall throughput measured in tens of MiB/s;
+    /// this may be unacceptably slow for particularly fast-updating data.
     pub fn create_dataset(
         parent: &Group,
         name: impl AsRef<str>,
         chunk_size: usize,
+        compression_level: Option<u8>,
     ) -> Result<Self, Hdf5Error> {
-        let dataset = parent
+        let mut dataset_builder = parent
             .new_dataset::<T>()
             .shape(SimpleExtents::resizable([0]))
             .chunk([chunk_size])
-            .chunk_cache(127, 4 * chunk_size * size_of::<T>(), 1.0)
-            .deflate(1)
+            .chunk_cache(127, 4 * chunk_size * size_of::<T>(), 1.0);
+
+        if let Some(compression_level) = compression_level {
+            dataset_builder = dataset_builder.deflate(compression_level);
+        }
+
+        let dataset = dataset_builder
             .create(name.as_ref())
             .err_parent_dataset(parent, name.as_ref())?;
 
@@ -86,7 +97,7 @@ mod tests {
     fn test_write_to_appendable_dataset() {
         let file = FileCreator::Memory.create_file("unittest").unwrap();
         let group = file.create_group("group").unwrap();
-        let ds = AppendableDataset1D::create_dataset(&group, "test_dataset", 1024).unwrap();
+        let ds = AppendableDataset1D::create_dataset(&group, "test_dataset", 1024, None).unwrap();
 
         ds.append_slice(&[]).unwrap();
         ds.append_slice(&[1, 2, 3]).unwrap();
