@@ -187,6 +187,10 @@ impl WriterModule for NXeventdata {
     }
 
     fn flush(&mut self) -> Result<(), WriterModuleError> {
+        // TODO: this isn't quite right; if we flush mid-run (e.g. autosave)
+        //       we shouldn't be writing/clearing partial frames, but if we
+        //       flush at the end of a run we do. Might need to add a flag
+        //       to the trait.
         for frame in self.partial_frames.values_mut() {
             self.event_frame_number
                 .append_value(self.current_event_frame_number)?;
