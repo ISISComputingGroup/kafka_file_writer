@@ -64,6 +64,10 @@ pub enum WriterModuleCreationError {
     #[error(transparent)]
     #[diagnostic(transparent)]
     InitializationHdf5Error(#[from] Hdf5Error),
+
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    WriterModuleError(#[from] WriterModuleError),
 }
 
 /// Result of calling `create` on a writer module spec.

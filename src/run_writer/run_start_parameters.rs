@@ -3,7 +3,7 @@
 use crate::config::GlobalConfig;
 use crate::error::FileWriterError;
 use crate::run_writer::nexus_structure::NexusFileStructure;
-use chrono::DateTime;
+use chrono::{DateTime, Utc};
 use isis_streaming_data_types::flatbuffers_generated::run_start_pl72::RunStart;
 use log::{debug, info, trace, warn};
 use rdkafka::Message;
@@ -96,11 +96,20 @@ impl RunStartParameters {
     }
 
     /// Get the (computer) run start time as an ISO8601 String (UTC timezone).
-    /// Returns None if the start time cannot be represented as ISO8601.
-    pub fn start_time_as_iso8601(&self) -> Option<String> {
-        let start_time: i64 = self.start_time_ms.try_into().ok()?;
-        let dt = DateTime::from_timestamp_millis(start_time)?;
-        Some(format!("{}", dt.format("%Y-%m-%dT%H:%M:%S%.3fZ")))
+    pub fn start_time_as_iso8601(&self) -> String {
+        let start_time: i64 = self.start_time_ms.try_into().unwrap_or(i64::MAX);
+        let dt = DateTime::from_timestamp_millis(start_time).unwrap_or(DateTime::<Utc>::MAX_UTC);
+        format!("{}", dt.format("%Y-%m-%dT%H:%M:%S%.3fZ"))
+    }
+
+    /// Get the (computer) run stop time as an ISO8601 String (UTC timezone).
+    pub fn stop_time_as_iso8601(&self) -> String {
+        let stop_time: i64 = self
+            .stop_time_ms
+            .and_then(|t| t.try_into().ok())
+            .unwrap_or(i64::MAX);
+        let dt = DateTime::from_timestamp_millis(stop_time).unwrap_or(DateTime::<Utc>::MAX_UTC);
+        format!("{}", dt.format("%Y-%m-%dT%H:%M:%S%.3fZ"))
     }
 }
 

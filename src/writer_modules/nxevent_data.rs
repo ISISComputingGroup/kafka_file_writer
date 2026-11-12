@@ -1,7 +1,7 @@
 //! Writer-module for an `NXevent_data` group.
 //!
 //! This is the main writer module for event-mode neutron data.
-use crate::hdf::attr::add_ascii_string_attribute;
+use crate::hdf::attr::add_simple_string_attribute;
 use crate::hdf::dataset::AppendableDataset1D;
 use crate::run_writer::run_start_parameters::RunStartParameters;
 use crate::stream::traits::KafkaMessageMeta;
@@ -13,7 +13,7 @@ use crate::writer_module::{
 use ahash::{HashMap, HashMapExt};
 use isis_streaming_data_types::DeserializedMessage;
 use isis_streaming_data_types::flatbuffers_generated::run_stop_6s4t::RunStop;
-use log::{debug, warn};
+use log::debug;
 use serde::Deserialize;
 
 #[derive(Debug)]
@@ -239,26 +239,15 @@ impl WriterModuleSpec for NXeventdata {
             AppendableDataset1D::create_dataset(&group, "event_time_offset", 4 * 1024 * 1024)?;
         let total_counts = AppendableDataset1D::create_dataset(&group, "total_counts", 1)?;
 
-        add_ascii_string_attribute(&group, "NX_class", "NXevent_data")?;
-        add_ascii_string_attribute(event_time_offset.raw_dataset(), "units", "microsecond")?;
-        add_ascii_string_attribute(event_time_zero.raw_dataset(), "units", "second")?;
+        add_simple_string_attribute(&group, "NX_class", "NXevent_data")?;
+        add_simple_string_attribute(event_time_offset.raw_dataset(), "units", "microsecond")?;
+        add_simple_string_attribute(event_time_zero.raw_dataset(), "units", "second")?;
 
-        if let Some(start_time_iso8601) = run_start_parameters.start_time_as_iso8601() {
-            add_ascii_string_attribute(
-                event_time_zero.raw_dataset(),
-                "offset",
-                &start_time_iso8601,
-            )?;
-        } else {
-            // Mantid can accept files without this attribute, so it is probably better to degrade
-            // gracefully and warn rather than failing to write the whole file if we can't format
-            // as ISO8601.
-            warn!(
-                "Run start time could not be expressed as an ISO8601 timestamp; skipping writing offset attribute at {} ({})",
-                event_time_zero.raw_dataset().name(),
-                event_time_zero.raw_dataset().filename()
-            );
-        }
+        add_simple_string_attribute(
+            event_time_zero.raw_dataset(),
+            "offset",
+            &run_start_parameters.start_time_as_iso8601(),
+        )?;
 
         let module = NXeventdata {
             run_start_time_ms: run_start_parameters.start_time_ms,
