@@ -1,12 +1,14 @@
 //! Contains the definitions of all writer modules implemented by this file-writer.
 use crate::writer_module_factories::WriterModuleFactories;
-use crate::writer_modules::instrument_name::InstrumentName;
+use crate::writer_modules::run_time_metadata::RunTimeMetadata;
+use instrument_name::InstrumentName;
 use ixseblock::IXseblock;
 use nxevent_data::NXeventdata;
 
 mod instrument_name;
 mod ixseblock;
 mod nxevent_data;
+mod run_time_metadata;
 
 /// The set of writer-modules available in this file writer.
 ///
@@ -16,6 +18,7 @@ pub fn default_registry() -> WriterModuleFactories {
     registry.register_module::<IXseblock>();
     registry.register_module::<NXeventdata>();
     registry.register_module::<InstrumentName>();
+    registry.register_module::<RunTimeMetadata>();
     registry
 }
 

@@ -5,6 +5,7 @@
       "name": "foo"
     },
     {
+      "type": "module",
       "module": "NXevent_data",
       "config": {
         "topic": "events"

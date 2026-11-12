@@ -1,5 +1,4 @@
-use crate::hdf::attr::add_ascii_string_attribute;
-use crate::hdf::error::Hdf5Error;
+use crate::hdf::attr::add_simple_string_attribute;
 use crate::hdf::traits::Hdf5ErrorContext;
 use crate::run_writer::run_start_parameters::RunStartParameters;
 use crate::stream::traits::KafkaMessageMeta;
@@ -60,19 +59,13 @@ impl WriterModuleSpec for InstrumentName {
             .err_parent_dataset(&group, config.dataset_name.as_str())?;
 
         let inst_name =
-            VarLenAscii::from_ascii(&run_start_parameters.instrument_name).map_err(|e| {
-                WriterModuleCreationError::InitializationHdf5Error(Hdf5Error::StringEncodingError {
-                    cause: Box::new(e),
-                    location: ds.name(),
-                    filename: ds.filename(),
-                })
-            })?;
+            VarLenAscii::from_ascii(&run_start_parameters.instrument_name).err_dataset(&ds)?;
 
         ds.write(&[inst_name]).err_dataset(&ds)?;
 
         // TODO: the instrument short name isn't necessarily the first 3 characters of the full name
         // SANDALS -> SLS...
-        add_ascii_string_attribute(
+        add_simple_string_attribute(
             &ds,
             "short_name",
             run_start_parameters

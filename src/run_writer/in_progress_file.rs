@@ -1,11 +1,12 @@
 //! Representation of a file which is in the process of being written to.
 use crate::error::FileWriterError;
-use crate::hdf::attr::{add_ascii_string_attribute, add_root_dataset_attributes};
+use crate::hdf::attr::{add_attribute, add_root_dataset_attributes};
 use crate::hdf::error::Hdf5Error;
+use crate::hdf::static_dataset::create_and_write_static_dataset;
 use crate::hdf::traits::Hdf5ErrorContext;
 use crate::run_writer::message_router::MessageRouter;
 use crate::run_writer::nexus_structure::{
-    NexusFileStructure, NexusGroup, NexusStructureError, NexusStructureItem,
+    NexusFileStructure, NexusGroup, NexusStructureItem, StaticDataset,
 };
 use crate::run_writer::placed_writer::PlacedWriter;
 use crate::run_writer::run_start_parameters::RunStartParameters;
@@ -14,7 +15,6 @@ use crate::writer_module_factories::WriterModuleFactories;
 use isis_streaming_data_types::DeserializedMessage;
 use isis_streaming_data_types::flatbuffers_generated::run_stop_6s4t::RunStop;
 use log::{error, trace};
-use serde_json::Value;
 
 /// Represents a file which is in the process of being written to.
 pub struct InProgressFile<'a> {
@@ -51,10 +51,8 @@ impl<'a> InProgressFile<'a> {
         for child in structure.children {
             self.add_child(&root, child, factories)?;
         }
-        for (key, json_value) in structure.attributes {
-            if let Value::String(value) = json_value {
-                add_ascii_string_attribute(&root, &key, &value)?;
-            }
+        for (key, value) in structure.attributes {
+            add_attribute(&root, &key, value)?;
         }
         add_root_dataset_attributes(&root)?;
         Ok(())
@@ -79,12 +77,9 @@ impl<'a> InProgressFile<'a> {
                 )?);
                 Ok(())
             }
-            NexusStructureItem::Invalid(json) => Err(FileWriterError::NexusStructureError(
-                NexusStructureError::UnknownChildType {
-                    location: parent.name(),
-                    invalid_json: json.to_string(),
-                },
-            )),
+            NexusStructureItem::StaticDataset(dataset_spec) => {
+                self.add_static_dataset(parent.clone(), dataset_spec)
+            }
         }
     }
 
@@ -103,16 +98,27 @@ impl<'a> InProgressFile<'a> {
             .create_group(&group.name)
             .err_parent_dataset(&parent, &group.name)?;
 
-        for (key, json_value) in group.attributes {
-            if let Value::String(value) = json_value {
-                add_ascii_string_attribute(&hdf_group, &key, &value)?;
-            }
+        for (key, value) in group.attributes {
+            add_attribute(&hdf_group, &key, value)?;
         }
 
         for child in group.children {
             self.add_child(&hdf_group, child, writer_module_factories)?;
         }
         Ok(())
+    }
+
+    fn add_static_dataset(
+        &mut self,
+        parent: hdf5::Group,
+        static_dataset: StaticDataset,
+    ) -> Result<(), FileWriterError> {
+        trace!(
+            "Creating new static-dataset '{}' with parent group {}",
+            static_dataset.name,
+            parent.name()
+        );
+        create_and_write_static_dataset(&parent, static_dataset)
     }
 
     fn add_placed_writer(&mut self, writer: PlacedWriter) {

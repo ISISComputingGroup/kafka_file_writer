@@ -5,4 +5,5 @@ pub mod dataset;
 pub mod error;
 pub mod file_creator;
 pub mod scope;
+pub mod static_dataset;
 pub mod traits;
