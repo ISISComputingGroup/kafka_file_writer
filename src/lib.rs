@@ -76,10 +76,23 @@
 //! no significant benefit to HDF5 write speeds when multithreading.
 //!
 //! Writer modules may use multithreading internally for parallelizable work.
+//!
+//! ## Benchmarks
+//!
+//! Performance-sensitive writer modules should have benchmarks added in the `benchmarks` directory
+//! to show that the writer modules can keep up with realistic event rates.
+//!
+//! These benchmarks are run using:
+//! ```shell
+//! cargo bench --features bench
+//! ```
+//!
+//!
 pub mod config;
 pub mod error;
 pub mod file_writer;
 pub mod hdf;
+pub mod messages;
 pub mod metrics;
 pub mod run_writer;
 pub mod stream;

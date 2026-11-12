@@ -131,6 +131,10 @@ impl<'a> SingleFileWriteTask<'a> {
         }
 
         if let Some(stop_time) = self.run_start_parameters.stop_time_ms {
+            info!(
+                "Run start included an explicit stop time at {} ms since epoch",
+                stop_time
+            );
             self.run_end_tracker.on_run_stop(stop_time, consumer);
         }
 
