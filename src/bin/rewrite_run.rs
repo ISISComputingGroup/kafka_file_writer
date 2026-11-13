@@ -106,7 +106,7 @@ fn main() -> Result<()> {
     let writer_module_registry = default_registry();
 
     let mut task = SingleFileWriteTask::new(&config, &writer_module_registry, &parameters);
-    task.write_data_for_run(&stream, FileCreator::Disk)?;
+    task.write_data_for_run(&stream, FileCreator::DiskOverwrite)?;
 
     Ok(())
 }

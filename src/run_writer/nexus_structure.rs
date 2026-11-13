@@ -26,12 +26,6 @@ pub enum NexusStructureError {
         location: SourceOffset,
     },
 
-    #[error("Unknown/invalid child type in nexus_structure at '{}': JSON for invalid child was:\n{}", .location, .invalid_json)]
-    UnknownChildType {
-        invalid_json: String,
-        location: String,
-    },
-
     #[error("Failed creating writer module '{}' at '{}'", .module_name, .location)]
     WriterModuleCreationError {
         #[source]
@@ -52,35 +46,19 @@ pub struct NexusFileStructure {
     #[serde(default)]
     pub children: Vec<NexusStructureItem>,
     #[serde(default)]
-    pub attributes: HashMap<String, Value>,
-}
-
-/// This enum with only one variant exists so that
-/// we can reject:
-/// ```json
-/// "type": "something_invalid"
-/// ```
-/// In something that otherwise looks like the structure
-/// of a ``nexus_group``.
-#[derive(Deserialize, Debug, PartialEq, Eq)]
-enum NexusGroupType {
-    #[serde(rename = "group")]
-    Group,
+    pub attributes: HashMap<String, StaticData>,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct NexusGroup {
-    #[serde(rename = "type")]
-    _type: NexusGroupType,
-
     pub name: String,
 
     #[serde(default)]
     pub children: Vec<NexusStructureItem>,
 
     #[serde(default)]
-    pub attributes: HashMap<String, Value>,
+    pub attributes: HashMap<String, StaticData>,
 }
 
 fn empty_dict() -> Value {
@@ -96,12 +74,61 @@ pub struct NexusWriterModule {
     pub config: Value,
 }
 
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+pub enum StaticDataType {
+    #[serde(rename = "u8")]
+    U8,
+    #[serde(rename = "u16")]
+    U16,
+    #[serde(rename = "u32")]
+    U32,
+    #[serde(rename = "u64")]
+    U64,
+    #[serde(rename = "i8")]
+    I8,
+    #[serde(rename = "i16")]
+    I16,
+    #[serde(rename = "i32")]
+    I32,
+    #[serde(rename = "i64")]
+    I64,
+    #[serde(rename = "f32")]
+    F32,
+    #[serde(rename = "f64")]
+    F64,
+    #[serde(rename = "ascii")]
+    Ascii,
+}
+
 #[derive(Deserialize, Debug, PartialEq, Eq)]
-#[serde(untagged)]
+pub struct StaticData {
+    pub dtype: StaticDataType,
+    #[serde(default)]
+    pub dims: Vec<usize>,
+    pub data: Value,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct StaticDataset {
+    pub name: String,
+
+    #[serde(flatten)]
+    pub data: StaticData,
+
+    #[serde(default)]
+    pub attributes: HashMap<String, StaticData>,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[serde(tag = "type")]
 pub enum NexusStructureItem {
+    #[serde(rename = "group")]
     Group(NexusGroup),
+    #[serde(rename = "module")]
     WriterModule(NexusWriterModule),
-    Invalid(Value), // Note: must be last - this matches *anything* with serde(untagged)
+    #[serde(rename = "dataset")]
+    StaticDataset(StaticDataset),
 }
 
 impl FromStr for NexusFileStructure {
@@ -183,26 +210,6 @@ mod tests {
             NexusStructureItem::Group(g) => g.name == "bar",
             _ => false,
         }));
-    }
-
-    #[test]
-    fn test_parse_nexus_structure_with_invalid_group_type() {
-        let json = r#"
-{
-    "children": [
-      {
-        "type": "group_blah_blah_blah",
-        "name": "foo"
-      }
-    ]
-}
-"#;
-
-        let structure = json.parse::<NexusFileStructure>().unwrap();
-        assert_eq!(
-            structure.children[0],
-            NexusStructureItem::Invalid(json!({"type": "group_blah_blah_blah", "name": "foo"}))
-        );
     }
 
     #[test]

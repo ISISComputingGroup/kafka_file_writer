@@ -4,14 +4,63 @@
       "type": "group",
       "name": "raw_data_1",
       "attributes": {
-        "NX_class": "NXentry"
+        "NX_class": {
+          "dtype": "ascii",
+          "data": ["NXentry"]
+        }
       },
       "children": [
+        {
+          "type": "module",
+          "module": "RunTimeMetadata"
+        },
+        {
+          "type": "module",
+          "module": "InstrumentName",
+          "config": {
+            "dataset_name": "beamline"
+          }
+        },
+        {
+          "type": "dataset",
+          "name": "definition",
+          "dtype": "ascii",
+          "dims": [1],
+          "data": ["TOFRAW"],
+          "attributes": {
+            "url": {
+              "dtype": "ascii",
+              "data": ["http://definition.nexusformat.org/instruments/TOFRAW?version=1.0"]
+            },
+            "version": {
+              "dtype": "ascii",
+              "data": ["1.0"]
+            }
+          }
+        },
+        {
+          "type": "dataset",
+          "name": "definition_local",
+          "dtype": "ascii",
+          "dims": [1],
+          "data": ["ISISTOFRAW"],
+          "attributes": {
+            "url": {
+              "dtype": "ascii",
+              "data": ["http://svn.isis.rl.ac.uk/instruments/ISISTOFRAW?version=1.0"]
+            },
+            "version": {
+              "dtype": "ascii",
+              "data": ["1.0"]
+            }
+          }
+        },
         {
           "type": "group",
           "name": "detector_1_events",
           "children": [
             {
+              "type": "module",
               "module": "NXevent_data",
               "config": {
                 "topic": "ALF_events"
@@ -20,20 +69,422 @@
           ]
         },
         {
+          "type": "dataset",
+          "name": "experiment_identifier",
+          "dtype": "ascii",
+          "dims": [1],
+          "data": ["12345678"]
+        },
+        {
           "type": "group",
-          "name": "selog",
-          "attributes": {
-            "NX_class": "IXselog"
-          },
+          "name": "instrument",
           "children": [
             {
               "type": "group",
-              "name": "SOME_BLOCK",
+              "name": "dae",
+              "attributes": {
+                "NX_class": {
+                  "dtype": "ascii",
+                  "data": ["IXdae"]
+                }
+              },
               "children": [
                 {
-                  "module": "IXseblock"
+                  "type": "dataset",
+                  "name": "period_index",
+                  "dtype": "i32",
+                  "dims": [1],
+                  "data": [1]
+                },
+                {
+                  "type": "dataset",
+                  "name": "type",
+                  "dtype": "ascii",
+                  "dims": [1],
+                  "data": ["ISIS_STREAMINGDAE"]
+                },
+                {
+                  "type": "group",
+                  "name": "vetos",
+                  "attributes": {
+                    "NX_class": {
+                      "dtype": "ascii",
+                      "data": ["IXvetos"]
+                    }
+                  }
                 }
               ]
+            },
+            {
+              "type": "group",
+              "name": "detector_1",
+              "attributes": {
+                "NX_class": {
+                  "dtype": "ascii",
+                  "data": ["NXdetector"]
+                }
+              },
+              "children": [
+                {
+                  "type": "dataset",
+                  "name": "delt",
+                  "dtype": "f32",
+                  "dims": [100],
+                  "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                  "attributes": {
+                    "units": {
+                      "dtype": "ascii",
+                      "data": ["us"]
+                    }
+                  }
+                },
+                {
+                  "type": "dataset",
+                  "name": "distance",
+                  "dtype": "f32",
+                  "dims": [100],
+                  "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                  "attributes": {
+                    "units": {
+                      "dtype": "ascii",
+                      "data": ["metre"]
+                    }
+                  }
+                },
+                {
+                  "type": "dataset",
+                  "name": "polar_angle",
+                  "dtype": "f32",
+                  "dims": [100],
+                  "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                  "attributes": {
+                    "units": {
+                      "dtype": "ascii",
+                      "data": ["degree"]
+                    }
+                  }
+                },
+                {
+                  "type": "dataset",
+                  "name": "source_detector_distance",
+                  "dtype": "f32",
+                  "dims": [1],
+                  "data": [0],
+                  "attributes": {
+                    "units": {
+                      "dtype": "ascii",
+                      "data": ["metre"]
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "group",
+              "name": "moderator",
+              "attributes": {
+                "NX_class": {
+                  "dtype": "ascii",
+                  "data": ["NXmoderator"]
+                }
+              },
+              "children": [
+                {
+                  "type": "dataset",
+                  "name": "distance",
+                  "dtype": "f32",
+                  "dims": [1],
+                  "data": [0],
+                  "attributes": {
+                    "units": {
+                      "dtype": "ascii",
+                      "data": ["metre"]
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "module",
+              "module": "InstrumentName",
+              "config": {
+                "dataset_name": "name"
+              }
+            },
+            {
+              "type": "group",
+              "name": "source",
+              "attributes": {
+                "NX_class": {
+                  "dtype": "ascii",
+                  "data": ["NXsource"]
+                }
+              },
+              "children": [
+                {
+                  "type": "dataset",
+                  "name": "name",
+                  "dtype": "ascii",
+                  "dims": [1],
+                  "data": ["ISIS"]
+                },
+                {
+                  "type": "dataset",
+                  "name": "probe",
+                  "dtype": "ascii",
+                  "dims": [1],
+                  "data": ["neutron"]
+                },
+                {
+                  "type": "dataset",
+                  "name": "type",
+                  "dtype": "ascii",
+                  "dims": [1],
+                  "data": ["Spallation Neutron Source"]
+                }
+              ]
+            }
+          ],
+          "attributes": {
+            "NX_class": {
+              "dtype": "ascii",
+              "data": ["NXinstrument"]
+            }
+          }
+        },
+        {
+          "type": "group",
+          "name": "measurement",
+          "attributes": {
+            "NX_class": {
+              "dtype": "ascii",
+              "data": ["NXcollection"]
+            }
+          },
+          "children": [
+            {
+              "type": "dataset",
+              "name": "first_run",
+              "dtype": "i32",
+              "dims": [1],
+              "data": [0]
+            },
+            {
+              "type": "dataset",
+              "name": "id",
+              "dtype": "ascii",
+              "dims": [1],
+              "data": [""]
+            },
+            {
+              "type": "dataset",
+              "name": "label",
+              "dtype": "ascii",
+              "dims": [1],
+              "data": [""]
+            },
+            {
+              "type": "dataset",
+              "name": "subid",
+              "dtype": "ascii",
+              "dims": [1],
+              "data": [""]
+            },
+            {
+              "type": "dataset",
+              "name": "type",
+              "dtype": "ascii",
+              "dims": [1],
+              "data": [""]
+            }
+          ]
+        },
+        {
+          "type": "dataset",
+          "name": "measurement_first_run",
+          "dtype": "i32",
+          "dims": [1],
+          "data": [0]
+        },
+        {
+          "type": "dataset",
+          "name": "measurement_id",
+          "dtype": "ascii",
+          "dims": [1],
+          "data": [""]
+        },
+        {
+          "type": "dataset",
+          "name": "measurement_label",
+          "dtype": "ascii",
+          "dims": [1],
+          "data": [""]
+        },
+        {
+          "type": "dataset",
+          "name": "measurement_subid",
+          "dtype": "ascii",
+          "dims": [1],
+          "data": [""]
+        },
+        {
+          "type": "dataset",
+          "name": "measurement_type",
+          "dtype": "ascii",
+          "dims": [1],
+          "data": [""]
+        },
+        {
+          "type": "group",
+          "name": "selog",
+          "attributes": {
+            "NX_class": {
+              "dtype": "ascii",
+              "data": ["IXselog"]
+            }
+          },
+          "children": []
+        },
+        {
+          "type": "module",
+          "module": "InstrumentName",
+          "config": {
+            "dataset_name": "name"
+          }
+        },
+        {
+          "type": "dataset",
+          "name": "notes",
+          "dtype": "ascii",
+          "dims": [1],
+          "data": [""]
+        },
+        {
+          "type": "dataset",
+          "name": "run_cycle",
+          "dtype": "ascii",
+          "dims": [1],
+          "data": ["26_4"]
+        },
+        {
+          "type": "dataset",
+          "name": "run_number",
+          "dtype": "i32",
+          "dims": [1],
+          "data": [123456]
+        },
+        {
+          "type": "group",
+          "name": "sample",
+          "attributes": {
+            "NX_class": {
+              "dtype": "ascii",
+              "data": ["NXsample"]
+            }
+          },
+          "children": [
+            {
+              "type": "dataset",
+              "name": "distance",
+              "dtype": "f64",
+              "dims": [1],
+              "data": [123.456]
+            },
+            {
+              "type": "dataset",
+              "name": "height",
+              "dtype": "f32",
+              "dims": [1],
+              "data": [123.456]
+            },
+            {
+              "type": "dataset",
+              "name": "id",
+              "dtype": "ascii",
+              "dims": [1],
+              "data": [""]
+            },
+            {
+              "type": "dataset",
+              "name": "name",
+              "dtype": "ascii",
+              "dims": [1],
+              "data": [""]
+            },
+            {
+              "type": "dataset",
+              "name": "shape",
+              "dtype": "ascii",
+              "dims": [1],
+              "data": [""]
+            },
+            {
+              "type": "dataset",
+              "name": "thickness",
+              "dtype": "f32",
+              "dims": [1],
+              "data": [123.456]
+            },
+            {
+              "type": "dataset",
+              "name": "type",
+              "dtype": "ascii",
+              "dims": [1],
+              "data": [""]
+            },
+            {
+              "type": "dataset",
+              "name": "width",
+              "dtype": "f32",
+              "dims": [1],
+              "data": [123.456]
+            }
+          ]
+        },
+        {
+          "type": "dataset",
+          "name": "script_name",
+          "dtype": "ascii",
+          "dims": [1],
+          "data": ["some_script_name"]
+        },
+        {
+          "type": "dataset",
+          "name": "seci_config",
+          "dtype": "ascii",
+          "dims": [1],
+          "data": ["some_config_name"]
+        },
+        {
+          "type": "dataset",
+          "name": "title",
+          "dtype": "ascii",
+          "dims": [1],
+          "data": ["this run has an amazing title"]
+        },
+        {
+          "type": "group",
+          "name": "user_1",
+          "attributes": {
+            "NX_class": {
+              "dtype": "ascii",
+              "data": ["NXuser"]
+            }
+          },
+          "children": [
+            {
+              "type": "dataset",
+              "name": "affiliation",
+              "dtype": "ascii",
+              "dims": [1],
+              "data": [""]
+            },
+            {
+              "type": "dataset",
+              "name": "name",
+              "dtype": "ascii",
+              "dims": [1],
+              "data": ["Tom,Jack"]
             }
           ]
         }

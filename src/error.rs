@@ -5,6 +5,7 @@ use crate::run_writer::nexus_structure::NexusStructureError;
 use crate::stream::error::StreamError;
 use crate::writer_module::WriterModuleError;
 use miette::Diagnostic;
+use ndarray::ShapeError;
 use rdkafka::Message;
 use thiserror::Error;
 
@@ -21,6 +22,12 @@ pub enum FileWriterError {
     #[error(transparent)]
     #[diagnostic(transparent)]
     StreamError(#[from] StreamError),
+
+    #[error(transparent)]
+    DeserializationError(#[from] serde_json::Error),
+
+    #[error(transparent)]
+    ShapeError(#[from] ShapeError),
 
     #[error("IO error during read/write of '{}'", filename)]
     IoError {

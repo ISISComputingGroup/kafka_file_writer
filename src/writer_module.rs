@@ -46,6 +46,11 @@ pub enum WriterModuleCreationError {
     #[error("Invalid writer module configuration: {}", description)]
     ConfigInvalid { description: String },
 
+    /// The run start passed to this writer module is semantically invalid
+    /// or inconsistent, and cannot be used.
+    #[error("Invalid run start for writer module: {}", description)]
+    RunStartInvalid { description: String },
+
     /// The configuration of this writer module failed to parse
     /// into the expected structure from JSON.
     #[error("Writer module config parse of type '{}' failed", config_type_name)]
@@ -59,6 +64,10 @@ pub enum WriterModuleCreationError {
     #[error(transparent)]
     #[diagnostic(transparent)]
     InitializationHdf5Error(#[from] Hdf5Error),
+
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    WriterModuleError(#[from] WriterModuleError),
 }
 
 /// Result of calling `create` on a writer module spec.
