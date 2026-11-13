@@ -44,6 +44,8 @@ impl<T: H5Type> AppendableDataset1D<T> {
                 .ok_or_else(|| Hdf5Error::ShapeError {
                     filename: self.dataset.filename(),
                     location: self.dataset.name(),
+                    actual_ndim: self.dataset.shape().len(),
+                    expected_ndim: 1,
                 })?;
         self.dataset
             .resize(original_length + value.len())

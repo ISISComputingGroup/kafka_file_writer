@@ -13,8 +13,19 @@ pub enum Hdf5Error {
         location: String,
     },
 
-    #[error("Invalid/unexpected shape of dataset at {} ({})", location, filename)]
-    ShapeError { filename: String, location: String },
+    #[error(
+        "Invalid/unexpected shape of dataset at {} ({}) - got ndim={}, expected ndim={}",
+        location,
+        filename,
+        actual_ndim,
+        expected_ndim
+    )]
+    ShapeError {
+        filename: String,
+        location: String,
+        expected_ndim: usize,
+        actual_ndim: usize,
+    },
 
     #[error("Failed to write to {} ({})", location, filename)]
     WriteError {
