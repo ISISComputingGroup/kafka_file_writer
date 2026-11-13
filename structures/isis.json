@@ -21,21 +21,38 @@
         },
         {
           "type": "group",
+          "name": "instrument",
+          "children": [
+            {
+              "module": "InstrumentName",
+              "config": {
+                "dataset_name": "name"
+              }
+            }
+          ],
+          "attributes": {
+            "NX_class": "NXinstrument"
+          }
+        },
+        {
+          "type": "group",
           "name": "selog",
           "attributes": {
             "NX_class": "IXselog"
           },
-          "children": [
-            {
-              "type": "group",
-              "name": "SOME_BLOCK",
-              "children": [
-                {
-                  "module": "IXseblock"
-                }
-              ]
-            }
-          ]
+          "children": []
+        },
+        {
+          "module": "InstrumentName",
+          "config": {
+            "dataset_name": "beamline"
+          }
+        },
+        {
+          "module": "InstrumentName",
+          "config": {
+            "dataset_name": "name"
+          }
         }
       ]
     }
