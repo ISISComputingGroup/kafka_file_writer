@@ -1,6 +1,7 @@
 //! Writer-module for an `NXevent_data` group.
 //!
 //! This is the main writer module for event-mode neutron data.
+
 use crate::hdf::attr::add_ascii_string_attribute;
 use crate::hdf::dataset::AppendableDataset1D;
 use crate::run_writer::run_start_parameters::RunStartParameters;
@@ -15,6 +16,7 @@ use isis_streaming_data_types::DeserializedMessage;
 use isis_streaming_data_types::flatbuffers_generated::run_stop_6s4t::RunStop;
 use log::{debug, warn};
 use serde::Deserialize;
+use std::time::Duration;
 
 #[derive(Debug)]
 struct PartialFrame {
@@ -60,8 +62,8 @@ type TotalCountsType = u64;
 
 #[derive(Debug)]
 pub struct NXeventdata {
-    run_start_time_ms: u64,
-    run_stop_time_ms: Option<u64>,
+    run_start_time_since_epoch: Duration,
+    run_stop_time_since_epoch: Option<Duration>,
     partial_frames: HashMap<(String, i32), PartialFrame>,
     current_event_index: u64,
     current_event_frame_number: i32,
@@ -74,16 +76,9 @@ pub struct NXeventdata {
 }
 
 impl NXeventdata {
-    fn run_start_time_ns(&self) -> i64 {
-        (self.run_start_time_ms.try_into().unwrap_or(i64::MAX)).saturating_mul(1_000_000)
-    }
-
-    fn run_stop_time_ns(&self) -> i64 {
-        (self
-            .run_stop_time_ms
-            .and_then(|t| t.try_into().ok())
-            .unwrap_or(i64::MAX))
-        .saturating_mul(1_000_000)
+    fn is_within_run(&self, t: Duration) -> bool {
+        (t >= self.run_start_time_since_epoch)
+            && (t <= self.run_stop_time_since_epoch.unwrap_or(Duration::MAX))
     }
 }
 
@@ -95,15 +90,16 @@ impl WriterModule for NXeventdata {
     ) -> Result<(), WriterModuleError> {
         match message {
             DeserializedMessage::PulseMetadataPu00(msg) => {
-                let reference_time_ns = msg.reference_time();
-                if reference_time_ns < self.run_start_time_ns()
-                    || reference_time_ns > self.run_stop_time_ns()
-                {
+                let reference_time_since_epoch =
+                    Duration::from_nanos(msg.reference_time().try_into().map_err(|_| {
+                        WriterModuleError::InvalidData("negative reference time".to_owned())
+                    })?);
+                if !self.is_within_run(reference_time_since_epoch) {
                     // Don't write frames from before run start time.
                     return Ok(());
                 }
                 let time_s_relative_to_run_start =
-                    (msg.reference_time() - self.run_start_time_ns()) as f64 / 1_000_000_000.;
+                    (reference_time_since_epoch - self.run_start_time_since_epoch).as_secs_f64();
                 let new_frame = PartialFrame::new(time_s_relative_to_run_start);
 
                 if let Some(old_frame) = self
@@ -130,10 +126,11 @@ impl WriterModule for NXeventdata {
                         "multiple reference times per message not supported".to_owned(),
                     ));
                 }
-                let reference_time_ns = msg.reference_time().get(0);
-                if reference_time_ns < self.run_start_time_ns()
-                    || reference_time_ns > self.run_stop_time_ns()
-                {
+                let reference_time =
+                    Duration::from_nanos(msg.reference_time().get(0).try_into().map_err(|_| {
+                        WriterModuleError::InvalidData("negative reference time".to_owned())
+                    })?);
+                if !self.is_within_run(reference_time) {
                     // Don't write frames from outside run start/stop times.
                     return Ok(());
                 }
@@ -182,7 +179,7 @@ impl WriterModule for NXeventdata {
         _meta: &KafkaMessageMeta,
         message: &RunStop,
     ) -> Result<(), WriterModuleError> {
-        self.run_stop_time_ms = Some(message.stop_time());
+        self.run_stop_time_since_epoch = Some(Duration::from_millis(message.stop_time()));
         Ok(())
     }
 
@@ -261,8 +258,8 @@ impl WriterModuleSpec for NXeventdata {
         }
 
         let module = NXeventdata {
-            run_start_time_ms: run_start_parameters.start_time_ms,
-            run_stop_time_ms: run_start_parameters.stop_time_ms,
+            run_start_time_since_epoch: Duration::from_millis(run_start_parameters.start_time_ms),
+            run_stop_time_since_epoch: run_start_parameters.stop_time_ms.map(Duration::from_millis),
             partial_frames: HashMap::new(),
             current_event_index: 0,
             current_event_frame_number: 0,
