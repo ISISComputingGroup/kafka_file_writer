@@ -1045,6 +1045,7 @@ dependencies = [
  "metrics",
  "metrics-exporter-prometheus",
  "miette",
+ "ndarray",
  "rayon",
  "rdkafka",
  "serde",

@@ -80,6 +80,7 @@ pub mod config;
 pub mod error;
 pub mod file_writer;
 pub mod hdf;
+pub mod messages;
 pub mod metrics;
 pub mod run_writer;
 pub mod stream;

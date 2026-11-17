@@ -3,6 +3,7 @@
 use crate::config::GlobalConfig;
 use crate::error::FileWriterError;
 use crate::run_writer::nexus_structure::NexusFileStructure;
+use chrono::{DateTime, SecondsFormat};
 use isis_streaming_data_types::flatbuffers_generated::run_start_pl72::RunStart;
 use log::{debug, info, trace, warn};
 use rdkafka::Message;
@@ -93,6 +94,14 @@ impl RunStartParameters {
             }
         }
     }
+
+    /// Get the (computer) run start time as an ISO8601 String (UTC timezone).
+    /// Returns None if the start time cannot be represented as ISO8601.
+    pub fn start_time_as_iso8601(&self) -> Option<String> {
+        let start_time: i64 = self.start_time_ms.try_into().ok()?;
+        let dt = DateTime::from_timestamp_millis(start_time)?;
+        Some(dt.to_rfc3339_opts(SecondsFormat::Millis, true))
+    }
 }
 
 #[cfg(test)]
@@ -133,5 +142,18 @@ mod tests {
         config.forced_nexus_structure_filepath = None;
 
         assert_eq!(rsp.structure(&config).unwrap(), "{}".parse().unwrap());
+    }
+
+    #[test]
+    fn test_get_start_time_as_iso8601() {
+        let rsp = RunStartParameters {
+            nexus_structure: "{}".to_owned(),
+            start_time_ms: 1794574377055,
+            ..Default::default()
+        };
+        assert_eq!(
+            rsp.start_time_as_iso8601(),
+            Some("2026-11-13T12:52:57.055Z".to_owned())
+        );
     }
 }
