@@ -121,6 +121,13 @@ pub struct StaticDataset {
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct HardLink {
+    pub name: String,
+    pub target: String,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 #[serde(tag = "type")]
 pub enum NexusStructureItem {
     #[serde(rename = "group")]
@@ -129,6 +136,8 @@ pub enum NexusStructureItem {
     WriterModule(NexusWriterModule),
     #[serde(rename = "dataset")]
     StaticDataset(StaticDataset),
+    #[serde(rename = "hard_link")]
+    HardLink(HardLink),
 }
 
 impl FromStr for NexusFileStructure {

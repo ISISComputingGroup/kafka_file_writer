@@ -4,6 +4,7 @@ pub mod attr;
 pub mod dataset;
 pub mod error;
 pub mod file_creator;
+pub mod hard_link;
 pub mod scope;
 pub mod static_dataset;
 pub mod traits;

@@ -1,17 +1,20 @@
 //! Representation of a file which is in the process of being written to.
+
 use crate::error::FileWriterError;
 use crate::hdf::attr::{add_attribute, add_root_dataset_attributes};
 use crate::hdf::error::Hdf5Error;
+use crate::hdf::hard_link::create_hard_link;
 use crate::hdf::static_dataset::create_and_write_static_dataset;
 use crate::hdf::traits::Hdf5ErrorContext;
 use crate::run_writer::message_router::MessageRouter;
 use crate::run_writer::nexus_structure::{
-    NexusFileStructure, NexusGroup, NexusStructureItem, StaticDataset,
+    HardLink, NexusFileStructure, NexusGroup, NexusStructureItem, StaticDataset,
 };
 use crate::run_writer::placed_writer::PlacedWriter;
 use crate::run_writer::run_start_parameters::RunStartParameters;
 use crate::stream::traits::KafkaMessageMeta;
 use crate::writer_module_factories::WriterModuleFactories;
+use hdf5::Group;
 use isis_streaming_data_types::DeserializedMessage;
 use isis_streaming_data_types::flatbuffers_generated::run_stop_6s4t::RunStop;
 use log::{error, trace};
@@ -20,6 +23,7 @@ use log::{error, trace};
 pub struct InProgressFile<'a> {
     file: hdf5::File,
     writers: Vec<PlacedWriter>,
+    hard_links: Vec<(Group, HardLink)>,
     run_start_parameters: &'a RunStartParameters,
     router: MessageRouter,
 }
@@ -34,6 +38,7 @@ impl<'a> InProgressFile<'a> {
         let mut result = InProgressFile {
             file,
             writers: vec![],
+            hard_links: vec![],
             run_start_parameters,
             router: MessageRouter::default(),
         };
@@ -79,6 +84,10 @@ impl<'a> InProgressFile<'a> {
             }
             NexusStructureItem::StaticDataset(dataset_spec) => {
                 self.add_static_dataset(parent.clone(), dataset_spec)
+            }
+            NexusStructureItem::HardLink(hard_link) => {
+                self.hard_links.push((parent.clone(), hard_link));
+                Ok(())
             }
         }
     }
@@ -173,6 +182,14 @@ impl<'a> InProgressFile<'a> {
         for writer in self.writers.iter_mut() {
             writer.flush()?;
         }
+
+        // This needs to happen after all datasets are created; writer modules
+        // may create datasets lazily, but all datasets should be "up to date"
+        // after a `flush`.
+        for (group, link) in self.hard_links.iter() {
+            create_hard_link(group, link)?;
+        }
+
         self.file.flush().map_err(|e| {
             FileWriterError::Hdf5Error(Hdf5Error::WriteError {
                 cause: Box::new(e),

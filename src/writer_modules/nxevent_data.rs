@@ -1,6 +1,14 @@
-//! Writer-module for an `NXevent_data` group.
+//! Writer-module for the datasets making up an `NXevent_data` group.
 //!
 //! This is the main writer module for event-mode neutron data.
+//!
+//! This module adds the following datasets to it's parent group:
+//! - `event_frame_number`
+//! - `event_id`
+//! - `event_index`
+//! - `event_time_offset`
+//! - `event_time_zero`
+//! - `total_counts`
 use crate::hdf::attr::add_simple_string_attribute;
 use crate::hdf::dataset::AppendableDataset1D;
 use crate::run_writer::run_start_parameters::RunStartParameters;
@@ -235,7 +243,6 @@ impl WriterModuleSpec for NXeventdata {
             AppendableDataset1D::create_dataset(&group, "event_time_offset", 4 * 1024 * 1024)?;
         let total_counts = AppendableDataset1D::create_dataset(&group, "total_counts", 1)?;
 
-        add_simple_string_attribute(&group, "NX_class", "NXevent_data")?;
         add_simple_string_attribute(event_time_offset.raw_dataset(), "units", "microsecond")?;
         add_simple_string_attribute(event_time_zero.raw_dataset(), "units", "second")?;
 

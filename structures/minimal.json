@@ -9,6 +9,12 @@
       "module": "NXevent_data",
       "config": {
         "topic": "events"
+      },
+      "attributes": {
+        "NX_class": {
+          "type": "ascii",
+          "data": ["NXevent_data"]
+        }
       }
     }
   ]

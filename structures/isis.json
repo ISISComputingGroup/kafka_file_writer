@@ -66,13 +66,42 @@
           "name": "detector_1_events",
           "children": [
             {
-              "type": "module",
-              "module": "NXevent_data",
-              "config": {
-                "topic": "ALF_events"
-              }
+              "type": "hard_link",
+              "name": "event_frame_number",
+              "target": "/raw_data_1/instrument/detector_1/event_frame_number"
+            },
+            {
+              "type": "hard_link",
+              "name": "event_id",
+              "target": "/raw_data_1/instrument/detector_1/event_id"
+            },
+            {
+              "type": "hard_link",
+              "name": "event_index",
+              "target": "/raw_data_1/instrument/detector_1/event_index"
+            },
+            {
+              "type": "hard_link",
+              "name": "event_time_offset",
+              "target": "/raw_data_1/instrument/detector_1/event_time_offset"
+            },
+            {
+              "type": "hard_link",
+              "name": "event_time_zero",
+              "target": "/raw_data_1/instrument/detector_1/event_time_zero"
+            },
+            {
+              "type": "hard_link",
+              "name": "total_counts",
+              "target": "/raw_data_1/instrument/detector_1/total_counts"
             }
-          ]
+          ],
+          "attributes": {
+            "NX_class": {
+              "dtype": "ascii",
+              "data": ["NXevent_data"]
+            }
+          }
         },
         {
           "type": "dataset",
@@ -131,6 +160,13 @@
                 }
               },
               "children": [
+                {
+                  "type": "module",
+                  "module": "NXevent_data",
+                  "config": {
+                    "topic": "ALF_events"
+                  }
+                },
                 {
                   "type": "dataset",
                   "name": "delt",
@@ -312,39 +348,29 @@
           ]
         },
         {
-          "type": "dataset",
+          "type": "hard_link",
           "name": "measurement_first_run",
-          "dtype": "i32",
-          "dims": [1],
-          "data": [0]
+          "target": "measurement/first_run"
         },
         {
-          "type": "dataset",
+          "type": "hard_link",
           "name": "measurement_id",
-          "dtype": "ascii",
-          "dims": [1],
-          "data": [""]
+          "target": "measurement/id"
         },
         {
-          "type": "dataset",
+          "type": "hard_link",
           "name": "measurement_label",
-          "dtype": "ascii",
-          "dims": [1],
-          "data": [""]
+          "target": "measurement/label"
         },
         {
-          "type": "dataset",
+          "type": "hard_link",
           "name": "measurement_subid",
-          "dtype": "ascii",
-          "dims": [1],
-          "data": [""]
+          "target": "measurement/subid"
         },
         {
-          "type": "dataset",
+          "type": "hard_link",
           "name": "measurement_type",
-          "dtype": "ascii",
-          "dims": [1],
-          "data": [""]
+          "target": "measurement/type"
         },
         {
           "type": "group",
