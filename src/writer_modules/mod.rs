@@ -4,9 +4,9 @@ use crate::writer_modules::instrument_name::InstrumentName;
 use ixseblock::IXseblock;
 use nxevent_data::NXeventdata;
 
-mod instrument_name;
-mod ixseblock;
-mod nxevent_data;
+pub mod instrument_name;
+pub mod ixseblock;
+pub mod nxevent_data;
 
 /// The set of writer-modules available in this file writer.
 ///
