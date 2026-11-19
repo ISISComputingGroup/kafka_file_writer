@@ -36,3 +36,29 @@ impl<T> Hdf5ErrorContext<T> for Result<T, hdf5::Error> {
         })
     }
 }
+
+impl<T> Hdf5ErrorContext<T> for Result<T, hdf5::types::StringError> {
+    fn err_dataset(self, dataset: &Location) -> Result<T, Hdf5Error> {
+        self.map_err(|e| Hdf5Error::StringEncodingError {
+            cause: Box::new(e),
+            location: dataset.name(),
+            filename: dataset.filename(),
+        })
+    }
+
+    fn err_parent_dataset(self, parent: &Location, dataset: &str) -> Result<T, Hdf5Error> {
+        self.map_err(|e| Hdf5Error::StringEncodingError {
+            cause: Box::new(e),
+            location: format!("{}/{}", parent.name(), dataset),
+            filename: parent.filename(),
+        })
+    }
+
+    fn err_attribute(self, parent: &Location, name: &str) -> Result<T, Hdf5Error> {
+        self.map_err(|e| Hdf5Error::StringEncodingError {
+            cause: Box::new(e),
+            location: format!("{} attribute='{}'", parent.name(), name),
+            filename: parent.filename(),
+        })
+    }
+}
