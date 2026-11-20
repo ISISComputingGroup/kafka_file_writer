@@ -404,6 +404,10 @@
           "data": [""]
         },
         {
+          "type": "module",
+          "module": "ProgramName"
+        },
+        {
           "type": "dataset",
           "name": "run_cycle",
           "dtype": "ascii",

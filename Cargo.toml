@@ -6,6 +6,8 @@ rust-version = "1.95.0"
 
 default-run = "kafka_file_writer"
 
+repository = "https://github.com/ISISComputingGroup/kafka_file_writer"
+
 [dependencies]
 itertools = "0.15.0"
 uuid = { version = "1.26.1", features = ["v4"] }
