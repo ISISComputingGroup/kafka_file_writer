@@ -6,12 +6,14 @@ rust-version = "1.95.0"
 
 default-run = "kafka_file_writer"
 
+repository = "https://github.com/ISISComputingGroup/kafka_file_writer"
+
 [dependencies]
 itertools = "0.15.0"
 uuid = { version = "1.26.1", features = ["v4"] }
 chrono = "0.4.45"
 rayon = "1.12.0"
-ndarray = "0.17.2"
+ndarray = { version = "0.17.2", features = ["serde"] }
 
 # Higher-performance HashMap
 ahash = { version = "0.8.12", features = ["serde"] }

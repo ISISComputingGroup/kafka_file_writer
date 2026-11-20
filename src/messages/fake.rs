@@ -8,6 +8,9 @@ use isis_streaming_data_types::flatbuffers_generated::events_ev44::{
 use isis_streaming_data_types::flatbuffers_generated::pulse_metadata_pu00::{
     Pu00Message, Pu00MessageArgs, finish_pu_00_message_buffer,
 };
+use isis_streaming_data_types::flatbuffers_generated::run_stop_6s4t::{
+    RunStop, RunStopArgs, finish_run_stop_buffer,
+};
 
 pub fn make_pu00(
     reference_time: i64,
@@ -43,6 +46,22 @@ pub fn make_ev44(reference_time: i64, time_of_flight: &[i32], pixel_id: &[i32]) 
 
     let buf = Event44Message::create(&mut fbb, &args);
     finish_event_44_message_buffer(&mut fbb, buf);
+    fbb.finished_data().to_vec()
+}
+
+pub fn make_6s4t(stop_time: u64, job_id: &str) -> Vec<u8> {
+    let mut fbb = FlatBufferBuilder::new();
+    let args = RunStopArgs {
+        stop_time,
+        job_id: Some(fbb.create_string(job_id)),
+        command_id: None,
+        service_id: None,
+        run_name: None,
+        abort: false,
+    };
+
+    let buf = RunStop::create(&mut fbb, &args);
+    finish_run_stop_buffer(&mut fbb, buf);
     fbb.finished_data().to_vec()
 }
 
